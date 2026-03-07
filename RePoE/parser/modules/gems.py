@@ -13,10 +13,10 @@ from RePoE.parser.util import call_with_default_args, get_release_state, get_sta
 
 
 def is_trans(gem_effect: DatRecord) -> bool:
-    # base transfiguration currently == 4, check the values if a new one is added
-    if gem_effect["ItemColor"] > 4:
+    # base transfiguration currently == 5, check the values if a new one is added
+    if gem_effect["ItemColor"] > 5:
         raise ValueError(f"New itemcolor has been added; need to bump the constant")
-    return gem_effect["ItemColor"] != 4
+    return gem_effect["ItemColor"] != 5
 
 
 def _handle_dict(representative: Dict[str, Any], per_level: List[Dict[str, Any]]):
@@ -430,10 +430,14 @@ class GemConverter:
         if secondary_granted_effect:
             obj["secondary_granted_effect"] = secondary_granted_effect["Id"]
 
+        # Base/incremental effectiveness from GrantedEffectStatSets (used for damage scaling formula)
+        gess = granted_effect["StatSet"]
+        obj["base_effectiveness"] = gess["BaseEffectiveness"]
+        obj["incremental_effectiveness"] = gess["IncrementalEffectiveness"]
+
         # GrantedEffectsPerLevel
         gepls = self.gepls[granted_effect["Id"]]
         gepls.sort(key=lambda g: g["Level"])
-        gess = granted_effect["StatSet"]
         gesspls = {row["GemLevel"]: row for row in self.gesspls[gess["Id"]]}
         gepls_dict = {}
         for gepl in gepls:

@@ -236,6 +236,8 @@ class GemsSchemaValue(BaseModel):
     discriminator: Optional[Discriminator] = None
     secondary_granted_effect: Optional[str] = None
     support_gem: Optional[SupportGem] = None
+    base_effectiveness: Optional[float] = None
+    incremental_effectiveness: Optional[float] = None
 
 
 class Model(RootModel[Optional[Dict[str, GemsSchemaValue]]]):
