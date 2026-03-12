@@ -27,10 +27,6 @@ class ItemClass(RootModel[str]):
     root: str
 
 
-class Master(RootModel[str]):
-    root: str
-
-
 class CraftingBenchOptionsSchemaElement(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -39,7 +35,6 @@ class CraftingBenchOptionsSchemaElement(BaseModel):
     bench_tier: int
     cost: Dict[str, int]
     item_classes: List[ItemClass]
-    master: Master
 
 
 class Model(RootModel[List[CraftingBenchOptionsSchemaElement]]):

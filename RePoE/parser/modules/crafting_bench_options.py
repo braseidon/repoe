@@ -42,7 +42,6 @@ class crafting_bench_options(Parser_Module):
             item_classes = [item_class["Id"] for item_class in item_class_rows]
             root.append(
                 {
-                    "master": row["HideoutNPCsKey"]["Hideout_NPCsKey"]["Name"],
                     "bench_tier": row["Tier"],
                     "item_classes": item_classes,
                     "cost": {base_item["Id"]: value for base_item, value in row["Cost"]},
