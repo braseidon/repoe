@@ -205,6 +205,8 @@ class GemsMinimalSchemaElement(BaseModel):
     quest_reward: Optional[QuestReward] = None
     discriminator: Optional[Discriminator] = None
     support_gem: Optional[SupportGem] = None
+    base_effectiveness: Optional[float] = None
+    incremental_effectiveness: Optional[float] = None
 
 
 class Model(RootModel[List[GemsMinimalSchemaElement]]):
