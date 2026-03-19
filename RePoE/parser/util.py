@@ -198,7 +198,7 @@ def export_image(
     data_path: str,
     file_system: FileSystem,
     outfile: str | None = None,
-    extensions=[".png", ".webp"],
+    extensions=[".webp"],
     compose: Callable[[Image], Image] | None = None,
 ) -> None:
     dest = os.path.join(data_path, os.path.splitext(outfile or ddsfile)[0])

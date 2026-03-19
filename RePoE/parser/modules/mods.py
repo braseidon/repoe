@@ -6,7 +6,7 @@ from PyPoE.poe.file.translations import install_data_dependant_quantifiers, Tran
 from PyPoE.poe.sim.mods import get_translation
 
 from RePoE.parser import Parser_Module
-from RePoE.parser.util import call_with_default_args, write_json
+from RePoE.parser.util import call_with_default_args, write_any_json, write_json
 
 
 def _convert_stats(
@@ -65,6 +65,37 @@ def _convert_tags_keys(tags_keys: List[DatRecord]) -> List[str]:
     return r
 
 
+def _to_slim(obj: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert a raw mod object to slim format for cache consumption.
+
+    Changes: spawn_weights/generation_weights flattened to {tag: weight},
+    empty arrays omitted, is_essence_only omitted when false,
+    implicit_tags renamed to tags.
+    """
+    slim = {
+        "required_level": obj["required_level"],
+        "stats": obj["stats"],
+        "domain": obj["domain"],
+        "name": obj["name"],
+        "type": obj["type"],
+        "generation_type": obj["generation_type"],
+        "groups": obj["groups"],
+        "tags": obj["implicit_tags"],
+        "spawn_weights": {sw["tag"]: sw["weight"] for sw in obj["spawn_weights"]},
+    }
+    if obj["text"] is not None:
+        slim["text"] = obj["text"]
+    if obj["generation_weights"]:
+        slim["generation_weights"] = {gw["tag"]: gw["weight"] for gw in obj["generation_weights"]}
+    if obj["grants_effects"]:
+        slim["grants_effects"] = obj["grants_effects"]
+    if obj["is_essence_only"]:
+        slim["is_essence_only"] = True
+    if obj["adds_tags"]:
+        slim["adds_tags"] = obj["adds_tags"]
+    return slim
+
+
 class mods(Parser_Module):
     def write(self) -> None:
         root = {}
@@ -101,6 +132,10 @@ class mods(Parser_Module):
                 root[mod["Id"]] = obj
 
         write_json(root, self.data_path, "mods")
+
+        # Slim output for cache commands: flattened weights, omit empties, tags renamed
+        slim_root = {k: _to_slim(v) for k, v in root.items()}
+        write_any_json(slim_root, self.data_path, "mods_slim")
 
 
 # a few unique item mods have the wrong mod domain so they wouldn't be added to the file without this

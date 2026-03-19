@@ -9,7 +9,7 @@ from PyPoE.poe.sim.poe1formula import GemTypes, gem_stat_requirement
 
 from RePoE.parser import Parser_Module
 from RePoE.parser.constants import COOLDOWN_BYPASS_TYPES
-from RePoE.parser.util import call_with_default_args, get_release_state, get_stat_translation_file_name, write_json
+from RePoE.parser.util import call_with_default_args, export_image, get_release_state, get_stat_translation_file_name, write_json
 
 GEM_COLORS = {
     1: "trans",  # alt_x
@@ -186,6 +186,7 @@ class GemConverter:
             "id": active_skill["Id"],
             "display_name": active_skill["DisplayedName"],
             "description": active_skill["Description"],
+            "icon": active_skill["Icon_DDSFile"],
             "types": self._select_active_skill_types(active_skill["ActiveSkillTypes"]),
             "weapon_restrictions": [ic["Id"] for ic in active_skill["WeaponRestriction_ItemClassesKeys"]],
             "is_skill_totem": is_skill_totem,
@@ -544,6 +545,11 @@ class gems(Parser_Module):
                     gem_effect,
                 )
                 skill_gems.append({k: gems[ge_id][k] for k in gems[ge_id] if k != "per_level"})
+
+                # Export skill bar icon for active gems
+                active_skill = gems[ge_id].get("active_skill")
+                if active_skill and active_skill.get("icon"):
+                    export_image(active_skill["icon"], self.data_path, self.file_system)
 
                 # Secondary skills from gems. This adds the support skill implicitly provided by Bane
                 granted_effect = gem_effect["GrantedEffect2"]

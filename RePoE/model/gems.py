@@ -123,6 +123,7 @@ class ActiveSkill(BaseModel):
     )
     description: str
     display_name: str
+    icon: Optional[str] = None
     id: str
     is_manually_casted: bool
     is_skill_totem: bool
