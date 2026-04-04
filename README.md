@@ -64,6 +64,15 @@ The following data is currently available:
 - `active_skill_types.json`: List the active skill types used in `gems.json`.
 - `uniques.json`: Lists the names and art files of unique items - this is the only information
 included in the data files.
+- `stat_translations.json`: Describes stat translation rules for converting stat ids and values
+  to display text.
+- `passives.json`: Describes passive skill tree nodes with their stats.
+- `mods_by_base.json`: Lists mods organized by the base item types they can appear on.
+- `timeless_jewels.json`: Describes timeless jewel data. Contains alternate passive skills
+  (replacement notables/keystones) and alternate passive additions (small node mods) grouped
+  by jewel type (Vaal, Karui, Maraketh, Templar, Eternal, Kalguuran), with stat text, spawn
+  weights, conqueror mappings, and version config (replacement weights, addition counts).
+- `world_areas.json`: Describes world areas (maps, acts, etc.) with their properties.
 
 ## Credits
 
