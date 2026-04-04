@@ -41,6 +41,7 @@ def _convert_armour_properties(armour_row: Optional[DatRecord], properties: Dict
     _add_min_max(armour_row, "Armour", "armour", properties)
     _add_min_max(armour_row, "Evasion", "evasion", properties)
     _add_min_max(armour_row, "EnergyShield", "energy_shield", properties)
+    _add_min_max(armour_row, "Ward", "ward", properties)
     _add_if_not_zero(armour_row["IncreasedMovementSpeed"], "movement_speed", properties)
 
 
@@ -140,6 +141,13 @@ ITEM_CLASS_BLACKLIST = {
     "ArchnemesisMod",
 }
 
+# Item classes where entries without type-specific data are dead/template entries.
+# These exist in BaseItemTypes.dat64 but lack rows in their type table (e.g. Tinctures.dat64),
+# meaning they have no usable properties. Skip them to avoid duplicates.
+ITEM_CLASS_REQUIRES_TYPE_DATA = {
+    "Tincture": "tincture",
+}
+
 
 class base_items(Parser_Module):
     def write(self) -> None:
@@ -162,6 +170,14 @@ class base_items(Parser_Module):
             if item["ItemClassesKey"]["Id"] in ITEM_CLASS_BLACKLIST:
                 skipped_item_classes.add(item["ItemClassesKey"]["Id"])
                 continue
+
+            # Skip template/dead entries for item classes that require type-specific data
+            item_class_id = item["ItemClassesKey"]["Id"]
+            if item_class_id in ITEM_CLASS_REQUIRES_TYPE_DATA:
+                type_key = ITEM_CLASS_REQUIRES_TYPE_DATA[item_class_id]
+                type_lookup = {"tincture": tincture_type}[type_key]
+                if type_lookup[item["Id"]] is None:
+                    continue
 
             it_path = item["InheritsFrom"]
             itfile = self.get_cache(ITFileCache)[it_path + ".it"]
