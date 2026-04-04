@@ -123,6 +123,49 @@ def _handle_primitives(
 class GemConverter:
     regex_number = re.compile(r"-?\d+(\.\d+)?")
 
+    # Manual overrides for skills whose projectile name doesn't match the GrantedEffect Id.
+    # Maps GrantedEffect Id -> Projectiles.dat Id suffix (under Metadata/Projectiles/).
+    _SKILL_ID_TO_PROJECTILE_OVERRIDE = {
+        "BallLightning": "BallLightningPlayer",
+        "Barrage": "BarrageSnipe",
+        "EtherealKnives": "ShadowProjectile",
+        "ExplosiveArrow": "FuseArrow",
+        "FlameTotem": "TotemFireSpray",
+        "FrostBlades": "IceStrikeProjectile",
+        "IceShot": "IceArrow",
+        "KineticBlast": "KineticBlastCelestial",
+        "LightningStrike": "LightningStrikeProjectile",
+        "MoltenStrike": "FireMortar",
+        "PoisonArrow": "CausticArrow",
+        "PowerSiphon": "Siphon",
+        "SiegeBallista": "CrossbowSnipeProjectile",
+        "Snipe": "ChannelledSnipeDefaultProjectile",
+        "SpectralThrow": "SpectralThrowBoomerang",
+        "SplitArrow": "SplitArrowDefault",
+        "ThrownWeapon": "ThrownWeapon",
+        "TornadoShot": "TornadoShotArrow",
+        "VaalBurningArrow": "VaalBurningArrow",
+        "VaalLightningStrike": "VaalLightningStrikeProjectile",
+        "VaalSplitArrow": "VaalSplitArrowDefault",
+        "VaalSpectralThrow": "SpectralThrowBoomerang",
+        "WildStrike": "ElementalStrikeColdProjectile",
+    }
+
+    # Skills that should NOT get projectile speed even if auto-discovered.
+    # Internal/secondary projectiles, or skills where the "projectile" is not a
+    # meaningful speed display (e.g. Riptide's 0.1 m/s projectile is a visual effect).
+    _PROJECTILE_SPEED_BLACKLIST = {
+        "Riptide",
+        "WandTeleport",
+        "CoilingAssault",
+        "SpiritBurst",
+        "VoidShot",
+        "SomaticShell",
+        "PlayerMelee",
+        "PlaytestAttack",
+        "PlaytestSpell",
+    }
+
     def __init__(
         self,
         file_system: FileSystem,
@@ -173,8 +216,69 @@ class GemConverter:
                 row["MonsterVarietiesKey"]["LifeMultiplier"] / 100
             )
 
+        # Build projectile speed lookup from Projectiles.dat64
+        # Key: suffix after "Metadata/Projectiles/" (e.g. "Spark"), Value: raw speed int
+        self._projectile_speeds: Dict[str, int] = {}
+        try:
+            for row in self.relational_reader["Projectiles.dat64"]:
+                proj_id = row["Id"]  # e.g. "Metadata/Projectiles/Spark"
+                speed = row["ProjectileSpeed"]
+                if speed and speed > 0:
+                    suffix = proj_id.replace("Metadata/Projectiles/", "")
+                    self._projectile_speeds[suffix] = speed
+        except Exception:
+            print("Warning: Could not load Projectiles.dat64 for projectile speed data")
+
         self.skill_stat_filter = StatFilterFile()
         self.skill_stat_filter.read(file_system.get_file("Metadata/StatDescriptions/skillpopup_stat_filters.txt"))
+
+    def _get_projectile_speed(self, granted_effect_id: str) -> Optional[int]:
+        """Look up projectile speed for a skill.
+
+        Strategy:
+        1. Check manual override map (for skills whose projectile name differs)
+        2. Try auto-discovery with common naming patterns
+        3. Return None if no match found
+
+        Returns the raw integer from Projectiles.dat (divide by 100 for metres/second).
+        """
+        if granted_effect_id in self._PROJECTILE_SPEED_BLACKLIST:
+            return None
+
+        # 1. Manual override
+        override = self._SKILL_ID_TO_PROJECTILE_OVERRIDE.get(granted_effect_id)
+        if override is not None:
+            return self._projectile_speeds.get(override)
+
+        # 2. Strip AltX/AltY/Vaal prefix to find base skill, then check override map
+        base_id = re.sub(r"AltX$|AltY$", "", granted_effect_id)
+        vaal_stripped = re.sub(r"^Vaal", "", base_id)
+
+        # Check override map for the base skill (handles AltX/AltY variants)
+        for candidate_id in [base_id, vaal_stripped]:
+            override = self._SKILL_ID_TO_PROJECTILE_OVERRIDE.get(candidate_id)
+            if override is not None:
+                return self._projectile_speeds.get(override)
+
+        # 3. Auto-discovery: try common naming patterns against Projectiles.dat suffixes
+        candidates = []
+        for candidate_id in [base_id, vaal_stripped]:
+            candidates.extend([
+                candidate_id,                          # e.g. "Spark" -> "Spark"
+                candidate_id + "Player",               # e.g. "BallLightning" -> "BallLightningPlayer"
+                candidate_id + "Projectile",           # e.g. "LightningStrike" -> "LightningStrikeProjectile"
+                candidate_id + "Arrow",                # e.g. "TornadoShot" -> "TornadoShotArrow"
+                candidate_id + "Default",              # e.g. "SplitArrow" -> "SplitArrowDefault"
+                candidate_id + "Boomerang",            # e.g. "SpectralThrow" -> "SpectralThrowBoomerang"
+                "Vaal" + candidate_id,                 # e.g. "Spark" -> "VaalSpark"
+            ])
+
+        for candidate in candidates:
+            speed = self._projectile_speeds.get(candidate)
+            if speed is not None:
+                return speed
+
+        return None
 
     def _convert_active_skill(self, active_skill: DatRecord) -> Dict[str, Any]:
         stat_conversions = {}
@@ -411,6 +515,9 @@ class GemConverter:
         else:
             obj["cast_time"] = granted_effect["CastTime"]
             obj["active_skill"] = self._convert_active_skill(granted_effect["ActiveSkill"])
+            proj_speed = self._get_projectile_speed(granted_effect["Id"])
+            if proj_speed is not None:
+                obj["projectile_speed"] = proj_speed
 
         if quest_reward:
             obj["quest_reward"] = quest_reward
@@ -433,6 +540,13 @@ class GemConverter:
                 obj["discriminator"] = "alt_x"
             elif "AltY" in gem_effect["Id"]:
                 obj["discriminator"] = "alt_y"
+
+            # Gem visual style (determines overlay background image)
+            item_color = gem_effect["ItemColor"]
+            if item_color == 3:
+                obj["gem_style"] = "trarthan"
+            elif item_color == 4:
+                obj["gem_style"] = "exceptional"
 
         if secondary_granted_effect:
             obj["secondary_granted_effect"] = secondary_granted_effect["Id"]
@@ -578,6 +692,17 @@ class gems(Parser_Module):
             if ge_id != "PlayerMelee":
                 continue
             gems[ge_id] = converter.convert(None, granted_effect)
+
+        # Export gem overlay images (background effects for Exceptional/Trarthan gems)
+        _GEM_OVERLAY_PATHS = [
+            "Art/2DItems/Gems/Overlays/ExceptionalSupportGemOverlay.dds",
+            "Art/2DItems/Gems/Overlays/Sparklebackground.dds",
+        ]
+        for overlay_path in _GEM_OVERLAY_PATHS:
+            try:
+                export_image(overlay_path, self.data_path, self.file_system)
+            except Exception:
+                print(f"Warning: Could not export gem overlay {overlay_path}")
 
         write_json(gems, self.data_path, "gems")
         write_json(skill_gems, self.data_path, "gems_minimal")

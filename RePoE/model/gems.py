@@ -235,10 +235,12 @@ class GemsSchemaValue(BaseModel):
     tags: Optional[List[Tag]] = None
     tooltip_order: Optional[List[str]] = None
     discriminator: Optional[Discriminator] = None
+    gem_style: Optional[str] = None
     secondary_granted_effect: Optional[str] = None
     support_gem: Optional[SupportGem] = None
     base_effectiveness: Optional[float] = None
     incremental_effectiveness: Optional[float] = None
+    projectile_speed: Optional[int] = None
 
 
 class Model(RootModel[Optional[Dict[str, GemsSchemaValue]]]):
