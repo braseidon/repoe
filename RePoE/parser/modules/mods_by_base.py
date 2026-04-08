@@ -52,6 +52,42 @@ class mods_by_base(Parser_Module):
                     continue
                 mods_by_domain.setdefault(mod["domain"], {})[mod_id] = mod
 
+        # Collect legacy mods (all spawn weights = 0) for the second pass.
+        # These are domain=item prefix/suffix mods that GGG removed from the drop pool.
+        # The main loop skips them because weight=0 is falsy in Python.
+        #
+        # Two categories:
+        # - "specific_tags" mods: have item-class tags (weapon, ring, etc.) — route to matching bases
+        # - "default_only" mods: only {default: 0} — apply to all standard equipment bases
+        #
+        # Exclusions (handled by dedicated cache sections, not the regular mod pool):
+        # - is_essence_only mods
+        # - Delve* prefix mods (delve drop-only, handled by delve generator)
+        # - BreachBody* mods (breach-specific, handled by breach generator)
+        legacy_specific: dict[str, dict] = {}
+        legacy_default_only: dict[str, dict] = {}
+        for mod_id, mod in mods_by_domain.get("item", {}).items():
+            gen_type = mod["generation_type"]
+            if gen_type not in ("prefix", "suffix"):
+                continue
+            spawn_weights = mod["spawn_weights"]
+            if not spawn_weights:
+                continue
+            if not all(sw["weight"] == 0 for sw in spawn_weights):
+                continue
+            # Skip mods handled by dedicated cache sections
+            if mod.get("is_essence_only", False):
+                continue
+            if mod_id.startswith("Delve"):
+                continue
+            if mod_id.startswith("BreachBody"):
+                continue
+            specific_tags = [sw["tag"] for sw in spawn_weights if sw["tag"] != "default"]
+            if specific_tags:
+                legacy_specific[mod_id] = {"mod": mod, "specific_tags": set(specific_tags)}
+            else:
+                legacy_default_only[mod_id] = {"mod": mod}
+
         for base_id, base in base_items.items():
             item_class: dict = item_classes[base["item_class"]]
             influence_tags = item_class.get("influence_tags", [])
@@ -103,6 +139,34 @@ class mods_by_base(Parser_Module):
                             break
             if conditional_mods:
                 by_tags.conditional_mods = list(sorted(conditional_mods))
+
+            # Legacy pass: add all-zero-weight mods that the main loop skipped (weight=0 is falsy).
+            # Influence legacy mods are already handled by the influence fallback above.
+            base_tags = set(base["tags"])
+            influence_tag_set = set(influence_tags)
+
+            # 1) Specific-tag legacy mods: route by non-default, non-influence tag match
+            for mod_id, legacy_info in legacy_specific.items():
+                non_influence_tags = legacy_info["specific_tags"] - influence_tag_set
+                if not non_influence_tags:
+                    continue
+                if not non_influence_tags.intersection(base_tags):
+                    continue
+                gen_type = legacy_info["mod"]["generation_type"]
+                mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
+                mod_group = mod_generation.root.setdefault(legacy_info["mod"]["type"], ModWeights({}))
+                if mod_id not in (mod_group.root or {}):
+                    mod_group.root[mod_id] = 0
+
+            # 2) Default-only legacy mods: apply to all standard equipment bases
+            #    (skip dedicated categories like jewels, flasks, etc.)
+            if item_class.get("category_id", None) not in include_classes:
+                for mod_id, legacy_info in legacy_default_only.items():
+                    gen_type = legacy_info["mod"]["generation_type"]
+                    mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
+                    mod_group = mod_generation.root.setdefault(legacy_info["mod"]["type"], ModWeights({}))
+                    if mod_id not in (mod_group.root or {}):
+                        mod_group.root[mod_id] = 0
 
         for synth in requests.get(
             "https://www.poewiki.net/index.php?title=Special:CargoExport&tables=synthesis_mods&format=json"
