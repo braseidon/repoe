@@ -68,7 +68,7 @@ class mods_by_base(Parser_Module):
         # - BreachBody* mods (breach-specific, handled by breach generator)
         legacy_specific: dict[str, dict] = {}
         legacy_default_only: dict[str, dict] = {}
-        for legacy_domain in ["item", "crafted", "unveiled"]:
+        for legacy_domain in ["item", "crafted", "unveiled", "flask"]:
             gen_type_prefix = f"{legacy_domain}_" if legacy_domain != "item" else ""
             for mod_id, mod in mods_by_domain.get(legacy_domain, {}).items():
                 gen_type = mod["generation_type"]
@@ -90,7 +90,7 @@ class mods_by_base(Parser_Module):
                 if specific_tags:
                     legacy_specific[mod_id] = {"mod": mod, "specific_tags": set(specific_tags), "gen_type_prefix": gen_type_prefix}
                 else:
-                    legacy_default_only[mod_id] = {"mod": mod, "gen_type_prefix": gen_type_prefix}
+                    legacy_default_only[mod_id] = {"mod": mod, "gen_type_prefix": gen_type_prefix, "domain": legacy_domain}
 
         for base_id, base in base_items.items():
             item_class: dict = item_classes[base["item_class"]]
@@ -174,17 +174,25 @@ class mods_by_base(Parser_Module):
                 if mod_id not in (mod_group.root or {}):
                     mod_group.root[mod_id] = 0
 
-            # 2) Default-only legacy mods: apply to all standard equipment bases
-            #    (skip dedicated categories like jewels, flasks, etc.)
-            if item_class.get("category_id", None) not in include_classes:
-                for mod_id, legacy_info in legacy_default_only.items():
-                    gen_type = legacy_info["gen_type_prefix"] + legacy_info["mod"]["generation_type"]
-                    if gen_type == "archnemesis":
-                        gen_type = "eater_of_worlds_implicit"
-                    mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
-                    mod_group = mod_generation.root.setdefault(legacy_info["mod"]["type"], ModWeights({}))
-                    if mod_id not in (mod_group.root or {}):
-                        mod_group.root[mod_id] = 0
+            # 2) Default-only legacy mods: apply to matching bases
+            #    Standard equipment (not in include_classes): gets item/crafted/unveiled legacy mods
+            #    Dedicated categories (flask, tincture): only gets mods from their own domain
+            is_standard_equip = item_class.get("category_id", None) not in include_classes
+            # Domains whose default-only legacy mods apply to standard equipment
+            standard_equip_domains = {"item", "crafted", "unveiled"}
+            for mod_id, legacy_info in legacy_default_only.items():
+                legacy_domain = legacy_info["domain"]
+                if is_standard_equip and legacy_domain not in standard_equip_domains:
+                    continue
+                if not is_standard_equip and legacy_domain != base["domain"]:
+                    continue
+                gen_type = legacy_info["gen_type_prefix"] + legacy_info["mod"]["generation_type"]
+                if gen_type == "archnemesis":
+                    gen_type = "eater_of_worlds_implicit"
+                mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
+                mod_group = mod_generation.root.setdefault(legacy_info["mod"]["type"], ModWeights({}))
+                if mod_id not in (mod_group.root or {}):
+                    mod_group.root[mod_id] = 0
 
         for synth in requests.get(
             "https://www.poewiki.net/index.php?title=Special:CargoExport&tables=synthesis_mods&format=json"
