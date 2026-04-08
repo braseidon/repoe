@@ -61,15 +61,15 @@ class mods_by_base(Parser_Module):
         # - "specific_tags" mods: have item-class tags (weapon, ring, etc.) — route to matching bases
         # - "default_only" mods: only {default: 0} — apply to all standard equipment bases
         #
-        # Collected from domain=item and domain=crafted (both have legacy mods).
+        # Collected from domain=item, domain=crafted, and domain=unveiled (all have legacy mods).
         # Exclusions (handled by dedicated cache sections, not the regular mod pool):
         # - is_essence_only mods
         # - Delve* prefix mods (delve drop-only, handled by delve generator)
         # - BreachBody* mods (breach-specific, handled by breach generator)
         legacy_specific: dict[str, dict] = {}
         legacy_default_only: dict[str, dict] = {}
-        for legacy_domain in ["item", "crafted"]:
-            gen_type_prefix = "crafted_" if legacy_domain == "crafted" else ""
+        for legacy_domain in ["item", "crafted", "unveiled"]:
+            gen_type_prefix = f"{legacy_domain}_" if legacy_domain != "item" else ""
             for mod_id, mod in mods_by_domain.get(legacy_domain, {}).items():
                 gen_type = mod["generation_type"]
                 if gen_type not in ("prefix", "suffix"):
