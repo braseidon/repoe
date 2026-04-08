@@ -68,8 +68,11 @@ class mods_by_base(Parser_Module):
         # - BreachBody* mods (breach-specific, handled by breach generator)
         legacy_specific: dict[str, dict] = {}
         legacy_default_only: dict[str, dict] = {}
-        for legacy_domain in ["item", "crafted", "unveiled", "flask"]:
-            gen_type_prefix = f"{legacy_domain}_" if legacy_domain != "item" else ""
+        for legacy_domain in ["item", "crafted", "unveiled", "flask", "misc", "abyss_jewel"]:
+            # Domains that ARE the base's native domain get no prefix (like "item" for standard equip).
+            # "misc" is the native domain for jewels, "abyss_jewel" for abyss jewels.
+            native_domains = {"item", "misc", "abyss_jewel"}
+            gen_type_prefix = f"{legacy_domain}_" if legacy_domain not in native_domains else ""
             for mod_id, mod in mods_by_domain.get(legacy_domain, {}).items():
                 gen_type = mod["generation_type"]
                 if gen_type not in ("prefix", "suffix"):
