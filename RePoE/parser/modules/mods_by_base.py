@@ -31,6 +31,7 @@ include_classes = set(
         "Jewel",
         "Map",
         "Relic",
+        "Tincture",
         "Trinket",
     ]
 )
@@ -53,40 +54,43 @@ class mods_by_base(Parser_Module):
                 mods_by_domain.setdefault(mod["domain"], {})[mod_id] = mod
 
         # Collect legacy mods (all spawn weights = 0) for the second pass.
-        # These are domain=item prefix/suffix mods that GGG removed from the drop pool.
+        # These are prefix/suffix mods that GGG removed from the drop/craft pool.
         # The main loop skips them because weight=0 is falsy in Python.
         #
         # Two categories:
         # - "specific_tags" mods: have item-class tags (weapon, ring, etc.) — route to matching bases
         # - "default_only" mods: only {default: 0} — apply to all standard equipment bases
         #
+        # Collected from domain=item and domain=crafted (both have legacy mods).
         # Exclusions (handled by dedicated cache sections, not the regular mod pool):
         # - is_essence_only mods
         # - Delve* prefix mods (delve drop-only, handled by delve generator)
         # - BreachBody* mods (breach-specific, handled by breach generator)
         legacy_specific: dict[str, dict] = {}
         legacy_default_only: dict[str, dict] = {}
-        for mod_id, mod in mods_by_domain.get("item", {}).items():
-            gen_type = mod["generation_type"]
-            if gen_type not in ("prefix", "suffix"):
-                continue
-            spawn_weights = mod["spawn_weights"]
-            if not spawn_weights:
-                continue
-            if not all(sw["weight"] == 0 for sw in spawn_weights):
-                continue
-            # Skip mods handled by dedicated cache sections
-            if mod.get("is_essence_only", False):
-                continue
-            if mod_id.startswith("Delve"):
-                continue
-            if mod_id.startswith("BreachBody"):
-                continue
-            specific_tags = [sw["tag"] for sw in spawn_weights if sw["tag"] != "default"]
-            if specific_tags:
-                legacy_specific[mod_id] = {"mod": mod, "specific_tags": set(specific_tags)}
-            else:
-                legacy_default_only[mod_id] = {"mod": mod}
+        for legacy_domain in ["item", "crafted"]:
+            gen_type_prefix = "crafted_" if legacy_domain == "crafted" else ""
+            for mod_id, mod in mods_by_domain.get(legacy_domain, {}).items():
+                gen_type = mod["generation_type"]
+                if gen_type not in ("prefix", "suffix"):
+                    continue
+                spawn_weights = mod["spawn_weights"]
+                if not spawn_weights:
+                    continue
+                if not all(sw["weight"] == 0 for sw in spawn_weights):
+                    continue
+                # Skip mods handled by dedicated cache sections
+                if mod.get("is_essence_only", False):
+                    continue
+                if mod_id.startswith("Delve"):
+                    continue
+                if mod_id.startswith("BreachBody"):
+                    continue
+                specific_tags = [sw["tag"] for sw in spawn_weights if sw["tag"] != "default"]
+                if specific_tags:
+                    legacy_specific[mod_id] = {"mod": mod, "specific_tags": set(specific_tags), "gen_type_prefix": gen_type_prefix}
+                else:
+                    legacy_default_only[mod_id] = {"mod": mod, "gen_type_prefix": gen_type_prefix}
 
         for base_id, base in base_items.items():
             item_class: dict = item_classes[base["item_class"]]
@@ -100,12 +104,18 @@ class mods_by_base(Parser_Module):
             tags = OrderedDict.fromkeys(base["tags"])
             conditional_tags = OrderedDict(tags)
             conditional_mods = set()
+            # Domains with prefixed gen_types (e.g. delve → delve_prefix, crafted → crafted_prefix)
+            # so downstream consumers can query each source separately.
+            # flask/tincture are NOT extra domains — they're the base's own domain for those
+            # item types and are already iterated via base["domain"]. Adding them here would
+            # cause cross-contamination via the "default" spawn_weight tag.
+            prefixed_domains = {"delve", "crafted", "unveiled", "flask", "tincture"}
+            extra_domains = ["delve", "crafted", "unveiled"]
             restart = True
             while restart:
                 restart = False
-                for domain in [base["domain"], "delve"]:
+                for domain in [base["domain"]] + extra_domains:
                     for mod_id, mod in mods_by_domain.get(domain, {}).items():
-                        delve = domain == "delve"
 
                         weight = next(
                             (weight["weight"] for weight in mod["spawn_weights"] if weight["tag"] in tags), None
@@ -121,8 +131,8 @@ class mods_by_base(Parser_Module):
                         # instead of "eater_of_worlds_implicit" — remap to match Exarch naming
                         if gen_type == "archnemesis":
                             gen_type = "eater_of_worlds_implicit"
-                        if delve:
-                            gen_type = "delve_" + gen_type
+                        if domain in prefixed_domains:
+                            gen_type = domain + "_" + gen_type
                         if not weight and not conditional_weight:
                             influence = next(
                                 (weight for weight in mod["spawn_weights"] if weight["tag"] in influence_tags), {}
@@ -156,7 +166,7 @@ class mods_by_base(Parser_Module):
                     continue
                 if not non_influence_tags.intersection(base_tags):
                     continue
-                gen_type = legacy_info["mod"]["generation_type"]
+                gen_type = legacy_info["gen_type_prefix"] + legacy_info["mod"]["generation_type"]
                 if gen_type == "archnemesis":
                     gen_type = "eater_of_worlds_implicit"
                 mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
@@ -168,7 +178,7 @@ class mods_by_base(Parser_Module):
             #    (skip dedicated categories like jewels, flasks, etc.)
             if item_class.get("category_id", None) not in include_classes:
                 for mod_id, legacy_info in legacy_default_only.items():
-                    gen_type = legacy_info["mod"]["generation_type"]
+                    gen_type = legacy_info["gen_type_prefix"] + legacy_info["mod"]["generation_type"]
                     if gen_type == "archnemesis":
                         gen_type = "eater_of_worlds_implicit"
                     mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
