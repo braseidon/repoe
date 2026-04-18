@@ -1,9 +1,9 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, FrozenSet, List, Optional, Set, Union
 
 from PyPoE.poe.poe1constants import MOD_DOMAIN
 from PyPoE.poe.file.dat import DatRecord
 from PyPoE.poe.file.translations import install_data_dependant_quantifiers, TranslationFileCache
-from PyPoE.poe.sim.mods import get_translation
+from PyPoE.poe.sim.mods import get_translation_file_from_domain
 
 from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, write_any_json, write_json
@@ -15,14 +15,75 @@ def _convert_stats(
         List[List[Union[DatRecord, int]]],
         List[Union[List[Optional[int]], List[Union[DatRecord, int]]]],
     ],
+    exclude_ids: FrozenSet[str] = frozenset(),
 ) -> List[Dict[str, Any]]:
     # 'Stats' is a virtual field that is an array of ['Stat1', ..., 'Stat5'].
     # 'Stat{i}' is a virtual field that is an array of ['StatsKey{i}', 'Stat{i}Min', 'Stat{i}Max']
     r = []
     for stat in stats:
         if isinstance(stat[0], DatRecord):
-            r.append({"id": stat[0]["Id"], "min": stat[1], "max": stat[2]})
+            stat_id = stat[0]["Id"]
+            if stat_id in exclude_ids:
+                continue
+            r.append({"id": stat_id, "min": stat[1], "max": stat[2]})
     return r
+
+
+def _get_buff_template_stat_ids(mod: DatRecord) -> Set[str]:
+    # PoE's Mods.dat64 duplicates a buff's mechanical stats (e.g. -15% PDR for
+    # Crushed) into the mod's own Stats list so the engine applies them when
+    # the display-flag stat (e.g. local_display_self_crushed) fires. In-game
+    # and PoB suppress these from the displayed text — only the flag line
+    # shows, with its reminder_text.
+    ids: Set[str] = set()
+    buff_template = mod["BuffTemplate"]
+    if buff_template is None:
+        return ids
+    buff_def = buff_template["BuffDefinitionsKey"]
+    if buff_def is None:
+        return ids
+    for stat in buff_def["StatsKeys"]:
+        ids.add(stat["Id"])
+    for stat in buff_def["Binary_StatsKeys"]:
+        ids.add(stat["Id"])
+    return ids
+
+
+def _convert_buff_template(mod: DatRecord) -> Optional[Dict[str, Any]]:
+    buff_template = mod["BuffTemplate"]
+    if buff_template is None:
+        return None
+    result: Dict[str, Any] = {"id": buff_template["Id"]}
+    buff_def = buff_template["BuffDefinitionsKey"]
+    if buff_def is not None:
+        result["buff"] = buff_def["Id"]
+    if buff_template["AuraRadius"]:
+        result["aura_radius_metres"] = buff_template["AuraRadius"] / 10
+    return result
+
+
+def _translate_mod(
+    mod: DatRecord,
+    translation_cache: TranslationFileCache,
+    exclude_ids: FrozenSet[str] = frozenset(),
+    lang: str = "English",
+) -> List[str]:
+    constants = mod.parent.constants
+    ids: List[str] = []
+    values: List[List[int]] = []
+    for i in constants.MOD_STATS_RANGE:
+        stat = mod["StatsKey%s" % i]
+        if stat is None:
+            continue
+        stat_id = stat["Id"]
+        if stat_id in exclude_ids:
+            continue
+        ids.append(stat_id)
+        values.append([mod["Stat%sMin" % i], mod["Stat%sMax" % i]])
+    tf_name = get_translation_file_from_domain(mod["Domain"], constants)
+    return translation_cache[tf_name].get_translation(
+        ids, values, full_result=True, lang=lang
+    ).lines
 
 
 def _convert_spawn_weights(spawn_weights: zip) -> List[Dict[str, Any]]:
@@ -41,12 +102,6 @@ def _convert_generation_weights(generation_weights: zip) -> List[Dict[str, Any]]
     for tag, weight in generation_weights:
         r.append({"tag": tag["Id"], "weight": weight})
     return r
-
-
-def _convert_buff(buff_definition, buff_value):
-    if buff_definition is None:
-        return {}
-    return {"id": buff_definition["Id"], "range": buff_value}
 
 
 def _convert_granted_effects(granted_effects_per_level: List[DatRecord]) -> List[Dict[str, Any]]:
@@ -93,6 +148,8 @@ def _to_slim(obj: Dict[str, Any]) -> Dict[str, Any]:
         slim["is_essence_only"] = True
     if obj["adds_tags"]:
         slim["adds_tags"] = obj["adds_tags"]
+    if obj.get("buff_template"):
+        slim["buff_template"] = obj["buff_template"]
     return slim
 
 
@@ -104,15 +161,19 @@ class mods(Parser_Module):
         for mod in self.relational_reader["Mods.dat64"]:
             domain = MOD_DOMAIN_FIX.get(mod["Id"], mod["Domain"])
 
+            buff_template_stat_ids = frozenset(_get_buff_template_stat_ids(mod))
+
             try:
-                lines = get_translation(mod, translation_cache, lang=self.language).lines
+                lines = _translate_mod(
+                    mod, translation_cache, exclude_ids=buff_template_stat_ids, lang=self.language
+                )
             except Exception as e:
                 print("could not get text for mod", mod["Id"], e)
                 lines = []
 
             obj = {
                 "required_level": mod["Level"],
-                "stats": _convert_stats(mod["Stats"]),
+                "stats": _convert_stats(mod["Stats"], exclude_ids=buff_template_stat_ids),
                 "text": "\n".join(lines) if lines else None,
                 "domain": domain.name.lower(),
                 "name": mod["Name"],
@@ -125,6 +186,7 @@ class mods(Parser_Module):
                 "is_essence_only": mod["IsEssenceOnlyModifier"] > 0,
                 "adds_tags": _convert_tags_keys(mod["TagsKeys"]),
                 "implicit_tags": _convert_tags_keys(mod["ImplicitTagsKeys"]),
+                "buff_template": _convert_buff_template(mod),
             }
             if mod["Id"] in root:
                 print("Duplicate mod id:", mod["Id"])

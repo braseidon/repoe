@@ -26,6 +26,15 @@ class Stat(BaseModel):
     min: int
 
 
+class BuffTemplate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: str
+    buff: Optional[str] = None
+    aura_radius_metres: Optional[float] = None
+
+
 class AddsTag(RootModel[str]):
     root: str
 
@@ -73,6 +82,7 @@ class ModsSchemaValue(BaseModel):
     text: Optional[str] = None
     type: str
     gold_value: Optional[float] = None
+    buff_template: Optional[BuffTemplate] = None
 
 
 class Model(RootModel[Optional[Dict[str, ModsSchemaValue]]]):
