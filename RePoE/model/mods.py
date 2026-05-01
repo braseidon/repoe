@@ -68,6 +68,7 @@ class ModsSchemaValue(BaseModel):
         extra="forbid",
     )
     adds_tags: List[AddsTag]
+    crafting_item_class_restrictions: List[str]
     domain: Domain
     generation_type: GenerationType
     generation_weights: List[NWeight]

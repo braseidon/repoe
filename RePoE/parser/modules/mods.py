@@ -148,6 +148,8 @@ def _to_slim(obj: Dict[str, Any]) -> Dict[str, Any]:
         slim["is_essence_only"] = True
     if obj["adds_tags"]:
         slim["adds_tags"] = obj["adds_tags"]
+    if obj["crafting_item_class_restrictions"]:
+        slim["crafting_item_class_restrictions"] = obj["crafting_item_class_restrictions"]
     if obj.get("buff_template"):
         slim["buff_template"] = obj["buff_template"]
     return slim
@@ -186,6 +188,9 @@ class mods(Parser_Module):
                 "is_essence_only": mod["IsEssenceOnlyModifier"] > 0,
                 "adds_tags": _convert_tags_keys(mod["TagsKeys"]),
                 "implicit_tags": _convert_tags_keys(mod["ImplicitTagsKeys"]),
+                "crafting_item_class_restrictions": [
+                    ic["Id"] for ic in mod["CraftingItemClassRestrictions"]
+                ],
                 "buff_template": _convert_buff_template(mod),
             }
             if mod["Id"] in root:
