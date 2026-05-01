@@ -1,8 +1,10 @@
 import json
+import os
 from collections import OrderedDict
 
 import requests
 
+from RePoE import __REPOE_DIR__
 from RePoE.model.mods_by_base import (
     EssenceModLevels,
     EssenceMods,
@@ -15,6 +17,34 @@ from RePoE.model.mods_by_base import (
 )
 from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, write_json
+
+_SYNTHESIS_WIKI_URL = (
+    "https://www.poewiki.net/index.php?title=Special:CargoExport&tables=synthesis_mods&format=json"
+    "&fields=synthesis_mods.item_class_ids__full%3Ditem_classes%2C+synthesis_mods.mod_ids__full%3Dmods"
+    "&group+by=synthesis_mods.mod_ids__full%2Csynthesis_mods.item_class_ids__full&order+by=&limit=2000"
+)
+_SYNTHESIS_WIKI_CACHE = os.path.join(__REPOE_DIR__, "wiki_cache", "synthesis_mods.json")
+
+
+def _fetch_synthesis_mods_with_cache():
+    """Synthesis mod → item-class mapping from poewiki.net's Cargo Export.
+
+    Refreshes the committed cache on every successful fetch; falls back to the
+    cache when the wiki is unreachable so a wiki outage doesn't break extraction.
+    """
+    try:
+        response = requests.get(_SYNTHESIS_WIKI_URL, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+    except (requests.RequestException, json.JSONDecodeError) as e:
+        print(f"  WARNING: synthesis wiki fetch failed ({e}); using cache {_SYNTHESIS_WIKI_CACHE}")
+        with open(_SYNTHESIS_WIKI_CACHE) as f:
+            return json.load(f)
+    os.makedirs(os.path.dirname(_SYNTHESIS_WIKI_CACHE), exist_ok=True)
+    with open(_SYNTHESIS_WIKI_CACHE, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"  Fetched {len(data)} synthesis mod groups from wiki; refreshed cache")
+    return data
 
 include_classes = set(
     [
@@ -197,11 +227,7 @@ class mods_by_base(Parser_Module):
                 if mod_id not in (mod_group.root or {}):
                     mod_group.root[mod_id] = 0
 
-        for synth in requests.get(
-            "https://www.poewiki.net/index.php?title=Special:CargoExport&tables=synthesis_mods&format=json"
-            "&fields=synthesis_mods.item_class_ids__full%3Ditem_classes%2C+synthesis_mods.mod_ids__full%3Dmods"
-            "&group+by=synthesis_mods.mod_ids__full%2Csynthesis_mods.item_class_ids__full&order+by=&limit=2000"
-        ).json():
+        for synth in _fetch_synthesis_mods_with_cache():
             for item_class in synth["item_classes"]:
                 results: SynthModGroups = root.root[item_classes[item_class]["name"]].root.setdefault(
                     "synthesis", SynthModGroups({})
