@@ -103,3 +103,7 @@ ENV/
 .vscode/
 /.vs/ProjectSettings.json
 /.vs/slnx.sqlite
+
+# Local script output (dump_ui_images.py, extract_ui_bundles.py, ad-hoc dumps)
+out/
+storage/
