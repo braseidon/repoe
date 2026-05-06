@@ -368,6 +368,11 @@ class GemConverter:
                 r["damage_multiplier"] = gesspl["BaseMultiplier"]
             if gesspl["SpellCritChance"] > 0:
                 r["crit_chance"] = gesspl["SpellCritChance"]
+            elif gesspl["AttackCritChance"] > 0:
+                # Attack skills (ShieldCrush, ShieldOfLight, etc.) carry crit in
+                # AttackCritChance; spell skills use SpellCritChance. The two are
+                # mutually exclusive in practice.
+                r["crit_chance"] = gesspl["AttackCritChance"]
             if gepl["AttackSpeedMultiplier"] != 0:
                 r["attack_speed_multiplier"] = gepl["AttackSpeedMultiplier"]
             if gepl["VaalSouls"] > 0:
