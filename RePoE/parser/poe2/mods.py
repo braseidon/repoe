@@ -98,6 +98,9 @@ class mods(Parser_Module):
                 "adds_tags": _convert_tags_keys(mod["Tags"]),
                 "implicit_tags": _convert_tags_keys(mod["ImplicitTags"]),
                 "gold_value": price["Value"] if price else None,
+                "crafting_item_class_restrictions": [
+                    ic["Id"] for ic in mod["CraftingItemClassRestrictions"]
+                ],
             }
             if mod["Id"] in root:
                 print("Duplicate mod id:", mod["Id"])
