@@ -160,10 +160,6 @@ class mods_by_base(Parser_Module):
                         if weight != conditional_weight:
                             conditional_mods.add(mod_id)
                         gen_type = mod["generation_type"]
-                        # GGG tagged all Eater of Worlds eldritch implicits as "archnemesis"
-                        # instead of "eater_of_worlds_implicit" — remap to match Exarch naming
-                        if gen_type == "archnemesis":
-                            gen_type = "eater_of_worlds_implicit"
                         if domain in prefixed_domains:
                             gen_type = domain + "_" + gen_type
                         if not weight and not conditional_weight:
@@ -200,8 +196,6 @@ class mods_by_base(Parser_Module):
                 if not non_influence_tags.intersection(base_tags):
                     continue
                 gen_type = legacy_info["gen_type_prefix"] + legacy_info["mod"]["generation_type"]
-                if gen_type == "archnemesis":
-                    gen_type = "eater_of_worlds_implicit"
                 mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
                 mod_group = mod_generation.root.setdefault(legacy_info["mod"]["type"], ModWeights({}))
                 if mod_id not in (mod_group.root or {}):
@@ -220,8 +214,6 @@ class mods_by_base(Parser_Module):
                 if not is_standard_equip and legacy_domain != base["domain"]:
                     continue
                 gen_type = legacy_info["gen_type_prefix"] + legacy_info["mod"]["generation_type"]
-                if gen_type == "archnemesis":
-                    gen_type = "eater_of_worlds_implicit"
                 mod_generation = mods_data.root.setdefault(gen_type, ModTypes({}))
                 mod_group = mod_generation.root.setdefault(legacy_info["mod"]["type"], ModWeights({}))
                 if mod_id not in (mod_group.root or {}):
