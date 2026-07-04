@@ -7,7 +7,7 @@ from PyPoE.poe.file.file_set import FileSet
 from PyPoE.poe.file.tsi import TSIFile
 
 from RePoE.parser import Parser_Module
-from RePoE.parser.util import call_with_default_args, write_any_json, write_json
+from RePoE.parser.util import call_with_default_args, write_json
 from RePoE.poe.file.arm import ARMFile
 from RePoE.poe.file.tdt import TDTFile
 
@@ -42,12 +42,6 @@ PACK_KEYS = [
 
 def pascal_case(key: str):
     return "".join(word.title() for word in key.split("_"))
-
-
-# files from ggg contain unnormalized paths
-# could fix this better further upstream, but for now just sprinkle this function around
-def normalize(filename) -> Any:
-    return filename.replace("//", "/")
 
 
 class world_areas(Parser_Module):
@@ -148,6 +142,10 @@ class world_areas(Parser_Module):
                     if "FillTiles" in master:
                         val["fill_tiles"] = self.process_fileset(base, master["FillTiles"])
                     if "FileGroups" in master:
+                        # this can be set from the dgrfile? did l know that when l wrote this?
+                        # if so, l should have added a comment here because that's confusing
+                        if "file_groups" in val:
+                            pass  # didn't hit a breakpoint here 0.5
                         val["file_groups"] = self.process_filegroup(base, master["FileGroups"])
             for node in val.get("nodes", []):
                 if node.get("room", None) == "graph" and node.get("strings", None):
@@ -158,12 +156,13 @@ class world_areas(Parser_Module):
                         val["subgraphs"] = {}
                     val["subgraphs"][subgraph] = subgraphs
                     for filename in subgraphs:
-                        self.process_graph(normalize(filename))
+                        self.process_graph(self.normalize(filename))
         except FileNotFoundError:
             print("Graph not found", filename)
         except Exception:
             print("Error in topology", filename)
-            raise
+            if self.fail_fast:
+                raise
 
     def process_master(self, filename: str):
         if filename in self.cache:
@@ -181,8 +180,7 @@ class world_areas(Parser_Module):
             raise
 
     def process_fileset(self, base: str, filename: str):
-        if "/" not in filename:
-            filename = base + filename
+        filename = self.resolve(base, filename)
         if filename in self.cache:
             return self.cache[filename]
         file = FileSet()
@@ -192,7 +190,7 @@ class world_areas(Parser_Module):
             for f in file.files:
                 if any("//" in p for p in f.get("prefix", [])):
                     continue
-                f["file"] = normalize(f["file"])
+                f["file"] = self.resolve(base, f["file"])
                 try:
                     if f["file"].endswith(".arm"):
                         room = self.process_room(f["file"])
@@ -212,7 +210,7 @@ class world_areas(Parser_Module):
             raise
 
     def process_filegroup(self, base, filename: str):
-        filename = base + filename
+        filename = self.resolve(base, filename)
         if filename in self.cache:
             return self.cache[filename]
         file = self.file_system.get_file(filename)
@@ -225,7 +223,7 @@ class world_areas(Parser_Module):
                     key = key_match.group(1)
                     files[key] = []
                 elif key and line.strip():
-                    files[key].append(base + line.strip())
+                    files[key].append(self.resolve(base, line))
             self.cache[filename] = files
             return files
         except FileNotFoundError:
@@ -252,11 +250,16 @@ class world_areas(Parser_Module):
                 raise Exception(filename)
 
     def process_room(self, filename: str):
-        if filename in self.cache:
-            return self.cache[filename]
-        room = ARMFile(filename, 2)
-        room.read(self.file_system.get_file(filename))
-        return room
+        try:
+            if filename in self.cache:
+                return self.cache[filename]
+            room = ARMFile(filename, 2)
+            room.read(self.file_system.get_file(filename))
+            return room
+        except Exception as e:
+            if self.fail_fast:
+                raise
+            print("Error processing room", filename, e)
 
     def process_tile(self, f: dict[str, Any]):
         filename = f["file"]

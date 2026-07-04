@@ -21,6 +21,7 @@ class Parser_Module:
         language: str,
         caches: dict[type, AbstractFileCache],
         sequel=1,
+        fail_fast=False,
     ) -> None:
         self.file_system = file_system
         self.data_path = data_path
@@ -28,6 +29,7 @@ class Parser_Module:
         self.relational_reader = relational_reader
         self.caches = caches or {}
         self.sequel = sequel
+        self.fail_fast = fail_fast
 
     def file_exists(self, path: str) -> bool:
         try:
@@ -38,6 +40,23 @@ class Parser_Module:
             )
         except FileNotFoundError:
             return False
+
+    def resolve(self, base, filename):
+        resolved = self.normalize(filename)
+        if self.file_exists(resolved):
+            return resolved
+        resolved = self.normalize(base + "/" + resolved)
+        if self.file_exists(resolved):
+            return resolved
+        return filename
+
+    # files from ggg contain unnormalized paths
+    # could fix this better further upstream, but for now just sprinkle this function around
+    @staticmethod
+    def normalize(filename: str) -> str:
+        while "//" in filename:
+            filename = filename.replace("//", "/")
+        return filename.strip()
 
     def get_cache(self, cache_type: type) -> AbstractFileCache:
         if cache_type not in self.caches:
