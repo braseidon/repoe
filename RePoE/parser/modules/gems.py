@@ -603,7 +603,17 @@ class GemConverter:
     def _get_translation_file_name(self, active_skill: Optional[Dict[str, Any]]) -> str:
         if active_skill is None:
             return "gem_stat_descriptions.txt"
-        stat_filter_group = self.skill_stat_filter.skills.get(active_skill["id"])
+        skill_id = active_skill["id"]
+        stat_filter_group = self.skill_stat_filter.skills.get(skill_id)
+        if stat_filter_group is None:
+            # Transfigured skill variants (e.g. arc_alt_x, arc_alt_y) are not listed
+            # in skillpopup_stat_filters.txt, so they fall through to the generic
+            # skill file — losing the base skill's specialized description file
+            # (beam_skill, aura_skill, etc.). Retry with the base skill id so the
+            # variant inherits the correct file, matching in-game display.
+            base_id = re.sub(r"_alt_[xyz]$", "", skill_id)
+            if base_id != skill_id:
+                stat_filter_group = self.skill_stat_filter.skills.get(base_id)
         if stat_filter_group is not None:
             return stat_filter_group.translation_file_path.replace("Metadata/StatDescriptions/", "")
         else:
