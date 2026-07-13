@@ -3,7 +3,7 @@ from typing import Any
 from PyPoE.poe.file.translations import TranslationFileCache
 
 from RePoE.parser import Parser_Module
-from RePoE.parser.util import call_with_default_args, write_json
+from RePoE.parser.util import call_with_default_args, export_image, write_json
 
 
 class timeless_jewels(Parser_Module):
@@ -75,6 +75,8 @@ class timeless_jewels(Parser_Module):
 
             if row["DDSIcon"]:
                 entry["icon"] = row["DDSIcon"]
+                if self.language == "English":
+                    export_image(row["DDSIcon"], self.data_path, self.file_system)
             if row["FlavourText"]:
                 entry["flavour_text"] = row["FlavourText"]
             if row["RandomMin"] != 0 or row["RandomMax"] != 0:
