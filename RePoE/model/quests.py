@@ -17,6 +17,33 @@ class QuestState(BaseModel):
     flags_missing: List[str]
 
 
+class QuestReward(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    item: str
+    item_id: str
+    classes: List[str]
+    level: int
+    stack: int
+
+
+class QuestStaticRewardStat(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: str
+    value: Optional[int] = None
+
+
+class QuestStaticReward(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    stats: List[QuestStaticRewardStat]
+    description: Optional[str] = None
+
+
 class QuestsSchemaElement(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -27,6 +54,9 @@ class QuestsSchemaElement(BaseModel):
     type: Optional[str] = None
     quest_id: int
     icon: Optional[str] = None
+    npcs: List[str]
+    rewards: List[QuestReward]
+    static_rewards: List[QuestStaticReward]
     states: List[QuestState]
 
 
