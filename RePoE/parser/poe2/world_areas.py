@@ -5,7 +5,6 @@ from PyPoE.poe.file.dat import DatRecord
 from PyPoE.poe.file.dgr import DGRFile
 from PyPoE.poe.file.file_set import FileSet
 from PyPoE.poe.file.tsi import TSIFile
-
 from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, write_json
 from RePoE.poe.file.arm import ARMFile
@@ -128,7 +127,7 @@ class world_areas(Parser_Module):
                     edge["edge_type"] = edge_file
                     if "color" in edge_type:
                         edge["color"] = edge_type["color"]
-                self.graphs[filename] = val
+                self.graphs[filename] = val if self.language == "English" else {}
             if "MasterFile" in file.data:
                 master = self.process_master(file.data["MasterFile"])
                 if master:

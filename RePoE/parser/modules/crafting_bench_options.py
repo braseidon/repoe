@@ -1,11 +1,11 @@
 import itertools
+from typing import Dict
+from typing import Union
 
+from PyPoE.poe.file.dat import DatRecord
 from RePoE.parser import Parser_Module
 from RePoE.parser.constants import CRAFTING_BENCH_CUSTOM_ACTIONS
 from RePoE.parser.util import write_json, call_with_default_args
-from PyPoE.poe.file.dat import DatRecord
-from typing import Dict
-from typing import Union
 
 
 class crafting_bench_options(Parser_Module):
@@ -28,6 +28,10 @@ class crafting_bench_options(Parser_Module):
             actions["remove_enchantments"] = True
         if row["CraftingBenchCustomAction"] == CRAFTING_BENCH_CUSTOM_ACTIONS.REROLL_RARITY:
             actions["reroll_rarity"] = True
+        if row["CraftingBenchCustomAction"] == CRAFTING_BENCH_CUSTOM_ACTIONS.REROLL_THREE:
+            actions["reroll_rare_mods"] = 3
+        if row["CraftingBenchCustomAction"] == CRAFTING_BENCH_CUSTOM_ACTIONS.REROLL_ONE:
+            actions["reroll_rare_mods"] = 1
         if len(actions) == 0:
             raise NotImplementedError(f"Crafting option {row['Name']} has an unknown action")
         return actions

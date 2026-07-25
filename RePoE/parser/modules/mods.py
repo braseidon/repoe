@@ -1,8 +1,8 @@
 from typing import Any, Dict, FrozenSet, List, Optional, Set, Union
 
-from PyPoE.poe.poe1constants import MOD_DOMAIN
 from PyPoE.poe.file.dat import DatRecord
 from PyPoE.poe.file.translations import install_data_dependant_quantifiers, TranslationFileCache
+from PyPoE.poe.poe1constants import MOD_DOMAIN
 from PyPoE.poe.sim.mods import get_translation_file_from_domain
 
 from RePoE.parser import Parser_Module

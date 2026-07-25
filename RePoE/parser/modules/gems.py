@@ -6,7 +6,6 @@ from PyPoE.poe.file.file_system import FileSystem
 from PyPoE.poe.file.stat_filters import StatFilterFile
 from PyPoE.poe.file.translations import TranslationFileCache, TranslationString
 from PyPoE.poe.sim.poe1formula import GemTypes, gem_stat_requirement
-
 from RePoE.parser import Parser_Module
 from RePoE.parser.constants import COOLDOWN_BYPASS_TYPES
 from RePoE.parser.util import call_with_default_args, export_image, get_release_state, get_stat_translation_file_name, write_json
@@ -513,7 +512,7 @@ class GemConverter:
         else:
             obj["tags"] = [tag["Id"] for tag in gem_tags]
 
-        obj["color"] = ["r", "g", "b", "w"][granted_effect["Attribute"] - 1]
+        obj["color"] = granted_effect["Attribute"].colour[0]
 
         if is_support:
             obj["support_gem"] = self._convert_support_gem_specific(granted_effect, gem_effect)
