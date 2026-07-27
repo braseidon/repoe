@@ -57,6 +57,14 @@ def _handle_dict(representative: Dict[str, Any], per_level: List[Dict[str, Any]]
         else:
             cleared = False
 
+    # Keys that only appear in higher-level dicts are invisible to the representative loop.
+    # They must never be promoted to static or deleted, and their presence has to keep the
+    # dict alive so the caller doesn't delete the containing key from every level.
+    for pl in per_level:
+        if any(k not in representative for k in pl):
+            cleared = False
+            break
+
     for k in cleared_keys:
         for pl in per_level:
             del pl[k]
