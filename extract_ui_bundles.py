@@ -112,6 +112,11 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/Classes/StrInt/Inquisitor/PassiveSkillScreenBackground",
         "Art/2DArt/UIImages/InGame/Classes/StrInt/PassiveSkillScreenStartNodeBackground",
     ],
+    "tree-node-highlights": [
+        "Art/2DArt/UIImages/InGame/AtlasScreen/AtlasPassiveMasteryIconHighlight",
+        "Art/2DArt/UIImages/InGame/AtlasScreen/NotableFrameHighlight",
+        "Art/2DArt/UIImages/InGame/AtlasScreen/NodeFrameHighlight",
+    ],
     "item-symbols": [
         "Art/2DArt/UIImages/InGame/ShaperItemSymbol",
         "Art/2DArt/UIImages/InGame/ElderItemSymbol",
