@@ -112,6 +112,14 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/Classes/StrInt/Inquisitor/PassiveSkillScreenBackground",
         "Art/2DArt/UIImages/InGame/Classes/StrInt/PassiveSkillScreenStartNodeBackground",
     ],
+    "divination-card-frames": [
+        "Art/2DArt/UIImages/InGame/MTX/DivinationCardStash/CardBackground",
+        "Art/2DArt/UIImages/InGame/MTX/DivinationCardStash/StackCompleteFrame",
+        "Art/2DArt/UIImages/InGame/ItemsSeparatorDivinationCardFrame",
+        "Art/2DArt/UIImages/InGame/MTX/DivinationCardStash/4K/CardBackground",
+        "Art/2DArt/UIImages/InGame/MTX/DivinationCardStash/4K/StackCompleteFrame",
+        "Art/2DArt/UIImages/InGame/4K/ItemsSeparatorDivinationCardFrame",
+    ],
     "tree-node-highlights": [
         "Art/2DArt/UIImages/InGame/AtlasScreen/AtlasPassiveMasteryIconHighlight",
         "Art/2DArt/UIImages/InGame/AtlasScreen/NotableFrameHighlight",
