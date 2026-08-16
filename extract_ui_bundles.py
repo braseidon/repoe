@@ -1,9 +1,13 @@
-"""Extract curated UI image bundles from Art/UIImages1.txt as cropped WebPs.
+"""Extract curated UI image bundles from the game's sprite IDLs as cropped WebPs.
 
-Reads the IDL, looks up each curated destination path, slices the source DDS
+Reads the IDLs, looks up each curated destination path, slices the source DDS
 atlas to that record's bounding box, and saves it as a .webp under the bundle's
 output directory. Bundles are defined either as explicit destination lists or
 as a path prefix that is expanded against the IDL at runtime.
+
+Two IDLs are read and merged. UIImages1.txt is the general UI atlas index;
+UIDivinationImages.txt holds divination card art plus the card frame templates.
+Their destination namespaces do not overlap.
 
 Configure paths via env vars:
     POE_GAME_PATH  Path to the Path of Exile install (default: Steam Windows path)
@@ -23,6 +27,8 @@ GAME_PATH = os.environ.get(
     "C:/Program Files (x86)/Steam/steamapps/common/Path of Exile/",
 )
 OUT_ROOT = os.environ.get("OUT_ROOT", "./out/ui-extract")
+
+IDL_FILES = ("Art/UIImages1.txt", "Art/UIDivinationImages.txt")
 
 _CLASS_ICONS = [
     # attr, ascendancy_suffix or "" for the base class icon
@@ -113,6 +119,13 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/Classes/StrInt/PassiveSkillScreenStartNodeBackground",
     ],
     "divination-card-frames": [
+        # The card face itself and its alternate skin, plus the divider that separates
+        # reward text from flavour text. These live in UIDivinationImages.txt, not UIImages1.
+        "Art/2DItems/Divination/Images/DivinationCard",
+        "Art/2DItems/Divination/Images/DivinationCardBottledFuture",
+        "Art/2DItems/Divination/Images/DivinationCardDivider",
+        # Divination Card Stash tab furniture (MTX). NOT the card face: CardBackground is
+        # a fully opaque slot plate and StackCompleteFrame is a border overlay.
         "Art/2DArt/UIImages/InGame/MTX/DivinationCardStash/CardBackground",
         "Art/2DArt/UIImages/InGame/MTX/DivinationCardStash/StackCompleteFrame",
         "Art/2DArt/UIImages/InGame/ItemsSeparatorDivinationCardFrame",
@@ -162,10 +175,12 @@ def extract_record(fs: FileSystem, record, out_path: str) -> None:
 
 def main() -> None:
     fs = FileSystem(GAME_PATH)
-    idl = IDLFile()
-    idl.read(file_path_or_raw=fs.get_file("Art/UIImages1.txt"))
     # index by destination for O(1) lookup
-    by_dest = {r.destination: r for r in idl}
+    by_dest = {}
+    for idl_path in IDL_FILES:
+        idl = IDLFile()
+        idl.read(file_path_or_raw=fs.get_file(idl_path))
+        by_dest.update({r.destination: r for r in idl})
 
     # Expand prefix bundles into explicit destination lists.
     bundles = dict(BUNDLES)
@@ -187,6 +202,9 @@ def main() -> None:
             tail = dest.split("/InGame/", 1)[-1]
             if tail == dest:
                 tail = dest.split("/UIImages/", 1)[-1]
+            if tail == dest:
+                # Not a UIImages path at all (e.g. the UIDivinationImages card frames).
+                tail = dest.rsplit("/", 1)[-1]
             out_path = os.path.join(OUT_ROOT, bundle_name, tail)
             extract_record(fs, record, out_path)
             total += 1
