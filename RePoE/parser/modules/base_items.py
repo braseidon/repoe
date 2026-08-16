@@ -5,7 +5,14 @@ from PyPoE.poe.file.dat import DatReader, DatRecord
 from PyPoE.poe.file.it import ITFileCache
 from PyPoE.poe.poe1constants import MOD_DOMAIN
 from RePoE.parser import Parser_Module
-from RePoE.parser.util import call_with_default_args, export_image, get_release_state, write_json, write_any_json
+from RePoE.parser.util import (
+    call_with_default_args,
+    export_image,
+    get_id_or_none,
+    get_release_state,
+    write_json,
+    write_any_json,
+)
 
 
 def _create_default_dict(relation: DatReader, col="BaseItemTypesKey") -> Dict:
@@ -147,6 +154,23 @@ ITEM_CLASS_REQUIRES_TYPE_DATA = {
     "Tincture": "tincture",
 }
 
+# DivinationCardArt.VirtualFile is a virtual path ("Art/2DItems/Divination/Images/TheDoctor"):
+# nothing lives there in the bundle index. The real texture sits under this root with the
+# leading "Art/" of the virtual path dropped and ".dds" appended. We keep emitting (and
+# exporting to) the virtual path so consumers get the same Art/2DItems/... + .dds -> .webp
+# convention visual_identity uses.
+DIVINATION_CARD_ART_ROOT = "Art/Textures/Interface/2D/DivinationCards/"
+
+
+def _card_art_dds_file(card_art_row: Optional[DatRecord]) -> Optional[str]:
+    if card_art_row is None:
+        return None
+    return card_art_row["VirtualFile"] + ".dds"
+
+
+def _card_art_source_file(dds_file: str) -> str:
+    return DIVINATION_CARD_ART_ROOT + dds_file.removeprefix("Art/")
+
 
 class base_items(Parser_Module):
     def write(self) -> None:
@@ -160,6 +184,7 @@ class base_items(Parser_Module):
         currency_type = _create_default_dict(relational_reader["CurrencyItems.dat64"])
         tincture_type = _create_default_dict(relational_reader["Tinctures.dat64"], "BaseItem")
         corpse_type = _create_default_dict(relational_reader["ItemisedCorpse.dat64"], "BaseItem")
+        card_art = _create_default_dict(relational_reader["DivinationCardArt.dat64"])
         # Not covered here: SkillGems.dat64 (see gems.py), Essences.dat64 (see essences.py)
 
         root = {}
@@ -201,6 +226,8 @@ class base_items(Parser_Module):
                 "inventory_width": item["Width"],
                 "inventory_height": item["Height"],
                 "drop_level": item["DropLevel"],
+                "flavour_text_id": get_id_or_none(item["FlavourTextKey"]),
+                "card_art_file": _card_art_dds_file(card_art[item_id]),
                 "implicits": [mod["Id"] for mod in item["Implicit_ModsKeys"]],
                 "tags": [tag["Id"] for tag in item["TagsKeys"]] + inherited_tags,
                 "visual_identity": {
@@ -216,6 +243,15 @@ class base_items(Parser_Module):
 
             if self.language == "English" and item["ItemVisualIdentity"]["DDSFile"]:
                 export_image(item["ItemVisualIdentity"]["DDSFile"], self.data_path, self.file_system)
+
+            card_art_file = root[item_id]["card_art_file"]
+            if self.language == "English" and card_art_file:
+                export_image(
+                    _card_art_source_file(card_art_file),
+                    self.data_path,
+                    self.file_system,
+                    outfile=card_art_file,
+                )
 
         print(f"Skipped the following item classes for base_items {skipped_item_classes}")
         write_json(root, self.data_path, "base_items")

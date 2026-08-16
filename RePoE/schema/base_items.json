@@ -62,6 +62,12 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "flavour_text_id": {
+                    "type": "string"
+                },
+                "card_art_file": {
+                    "type": "string"
                 }
             },
             "required": [

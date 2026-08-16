@@ -114,6 +114,8 @@ class BaseItemsSchemaValue(BaseModel):
     requirements: Optional[Requirements] = None
     grants_buff: Optional[GrantsBuff] = None
     skills_granted: Optional[List[str]] = None
+    flavour_text_id: Optional[str] = None
+    card_art_file: Optional[str] = None
 
 
 class Model(RootModel[Optional[Dict[str, BaseItemsSchemaValue]]]):
