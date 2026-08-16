@@ -30,6 +30,9 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
+                "display_mods": {
+                    "$ref": "#/definitions/EssenceDisplayMods"
+                },
                 "item_level_restriction": {
                     "type": "integer"
                 },
@@ -56,6 +59,73 @@
                 "type"
             ],
             "title": "Essence"
+        },
+        "EssenceDisplayMods": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "Amulet": {
+                    "type": "string"
+                },
+                "Armour": {
+                    "type": "string"
+                },
+                "Belt": {
+                    "type": "string"
+                },
+                "BodyArmour": {
+                    "type": "string"
+                },
+                "Boots": {
+                    "type": "string"
+                },
+                "Bow": {
+                    "type": "string"
+                },
+                "Gloves": {
+                    "type": "string"
+                },
+                "Helmet": {
+                    "type": "string"
+                },
+                "Items": {
+                    "type": "string"
+                },
+                "Jewellery": {
+                    "type": "string"
+                },
+                "MeleeWeapon": {
+                    "type": "string"
+                },
+                "OneHandWeapon": {
+                    "type": "string"
+                },
+                "Quiver": {
+                    "type": "string"
+                },
+                "RangedWeapon": {
+                    "type": "string"
+                },
+                "Ring": {
+                    "type": "string"
+                },
+                "Shield": {
+                    "type": "string"
+                },
+                "TwoHandMeleeWeapon": {
+                    "type": "string"
+                },
+                "TwoHandWeapon": {
+                    "type": "string"
+                },
+                "Wand": {
+                    "type": "string"
+                },
+                "Weapon": {
+                    "type": "string"
+                }
+            },
+            "title": "EssenceDisplayMods"
         },
         "EssenceMods": {
             "type": "object",

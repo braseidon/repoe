@@ -4,6 +4,39 @@ from PyPoE.poe.file.dat import DatRecord
 from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, write_json
 
+# The item-facing Display_*_ModsKey groups on Essences.dat64, in column order.
+# Display_Monster_ModsKey is excluded: it buffs the essence monster, not an item.
+DISPLAY_GROUPS = (
+    "Wand",
+    "Bow",
+    "Quiver",
+    "Amulet",
+    "Ring",
+    "Belt",
+    "Gloves",
+    "Boots",
+    "BodyArmour",
+    "Helmet",
+    "Shield",
+    "Weapon",
+    "MeleeWeapon",
+    "OneHandWeapon",
+    "TwoHandWeapon",
+    "TwoHandMeleeWeapon",
+    "Armour",
+    "RangedWeapon",
+    "Jewellery",
+    "Items",
+)
+
+
+def _convert_display_mods(row: DatRecord) -> Dict[str, str]:
+    return {
+        group: row["Display_" + group + "_ModsKey"]["Id"]
+        for group in DISPLAY_GROUPS
+        if row["Display_" + group + "_ModsKey"]
+    }
+
 
 def _convert_mods(row: DatRecord) -> Dict[str, str]:
     class_to_key = {
@@ -46,6 +79,7 @@ class essences(Parser_Module):
                     "is_corruption_only": row["EssenceTypeKey"]["IsCorruptedEssence"],
                 },
                 "mods": _convert_mods(row),
+                "display_mods": _convert_display_mods(row),
             }
             for row in self.relational_reader["Essences.dat64"]
         }

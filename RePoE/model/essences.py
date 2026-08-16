@@ -45,10 +45,37 @@ class EssenceMods(BaseModel):
     Wand: Optional[str] = None
 
 
+class EssenceDisplayMods(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    Amulet: Optional[str] = None
+    Armour: Optional[str] = None
+    Belt: Optional[str] = None
+    BodyArmour: Optional[str] = None
+    Boots: Optional[str] = None
+    Bow: Optional[str] = None
+    Gloves: Optional[str] = None
+    Helmet: Optional[str] = None
+    Items: Optional[str] = None
+    Jewellery: Optional[str] = None
+    MeleeWeapon: Optional[str] = None
+    OneHandWeapon: Optional[str] = None
+    Quiver: Optional[str] = None
+    RangedWeapon: Optional[str] = None
+    Ring: Optional[str] = None
+    Shield: Optional[str] = None
+    TwoHandMeleeWeapon: Optional[str] = None
+    TwoHandWeapon: Optional[str] = None
+    Wand: Optional[str] = None
+    Weapon: Optional[str] = None
+
+
 class Essence(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    display_mods: Optional[EssenceDisplayMods] = None
     item_level_restriction: Optional[int] = None
     level: int
     mods: Optional[EssenceMods] = None
