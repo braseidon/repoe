@@ -2,7 +2,12 @@ from typing import Dict
 
 from PyPoE.poe.file.dat import DatRecord
 from RePoE.parser import Parser_Module
-from RePoE.parser.util import call_with_default_args, write_json
+from RePoE.parser.util import call_with_default_args, write_any_json, write_json
+
+# ClientStrings.dat64 prefix for the human-readable essence slot labels. Covers both the
+# exact item classes in `mods` and the grouped slots in `display_mods`, plus the "Other {0}"
+# template the game composes with a group label to render lines like "Other Armour".
+ESSENCE_CATEGORY_PREFIX = "EssenceCategory"
 
 # The item-facing Display_*_ModsKey groups on Essences.dat64, in column order.
 # Display_Monster_ModsKey is excluded: it buffs the essence monster, not an item.
@@ -84,6 +89,13 @@ class essences(Parser_Module):
             for row in self.relational_reader["Essences.dat64"]
         }
         write_json(essences, self.data_path, "essences")
+
+        categories = {
+            row["Id"].removeprefix(ESSENCE_CATEGORY_PREFIX): row["Text"]
+            for row in self.relational_reader["ClientStrings.dat64"]
+            if row["Id"].startswith(ESSENCE_CATEGORY_PREFIX)
+        }
+        write_any_json(categories, self.data_path, "essence_categories")
 
 
 if __name__ == "__main__":
