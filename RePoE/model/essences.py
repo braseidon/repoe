@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
@@ -71,13 +71,24 @@ class EssenceDisplayMods(BaseModel):
     Weapon: Optional[str] = None
 
 
+class EssenceDisplayLine(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    category: str
+    label: str
+    mod: str
+
+
 class Essence(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    display_blocks: Optional[List[List[EssenceDisplayLine]]] = None
     display_mods: Optional[EssenceDisplayMods] = None
     item_level_restriction: Optional[int] = None
     level: int
+    level_restriction_text: Optional[str] = None
     mods: Optional[EssenceMods] = None
     name: str
     spawn_level_min: int

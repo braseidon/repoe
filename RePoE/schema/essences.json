@@ -30,6 +30,15 @@
             "type": "object",
             "additionalProperties": false,
             "properties": {
+                "display_blocks": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/EssenceDisplayLine"
+                        }
+                    }
+                },
                 "display_mods": {
                     "$ref": "#/definitions/EssenceDisplayMods"
                 },
@@ -38,6 +47,9 @@
                 },
                 "level": {
                     "type": "integer"
+                },
+                "level_restriction_text": {
+                    "type": "string"
                 },
                 "mods": {
                     "$ref": "#/definitions/EssenceMods"
@@ -59,6 +71,27 @@
                 "type"
             ],
             "title": "Essence"
+        },
+        "EssenceDisplayLine": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "mod": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "category",
+                "label",
+                "mod"
+            ],
+            "title": "EssenceDisplayLine"
         },
         "EssenceDisplayMods": {
             "type": "object",
