@@ -15,6 +15,7 @@ Configure paths via env vars:
 """
 
 import os
+import sys
 from io import BytesIO
 
 from PIL import Image
@@ -159,6 +160,12 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/Misc/ShaperItemMask",
         "Art/2DArt/UIImages/Misc/ElderItemBackground",
     ],
+    "memory-strands": [
+        "Art/2DArt/UIImages/InGame/MemeoryStrandsDisplayBacking",
+        "Art/2DArt/UIImages/InGame/MemeoryStrandsIcon",
+        "Art/2DArt/UIImages/InGame/RosePetalInfluencedItemSymbol",
+        "Art/2DArt/UIImages/InGame/ZanaPetalsIcon",
+    ],
 }
 
 
@@ -186,6 +193,13 @@ def main() -> None:
     bundles = dict(BUNDLES)
     for bundle_name, prefix in PREFIX_BUNDLES.items():
         bundles[bundle_name] = sorted(d for d in by_dest if d.startswith(prefix))
+
+    # Optional argv filter: `extract_ui_bundles.py memory-strands item-symbols`
+    if len(sys.argv) > 1:
+        unknown = [n for n in sys.argv[1:] if n not in bundles]
+        if unknown:
+            raise SystemExit(f"unknown bundle(s): {unknown}; known: {sorted(bundles)}")
+        bundles = {n: bundles[n] for n in sys.argv[1:]}
 
     total = 0
     missing: list[str] = []
