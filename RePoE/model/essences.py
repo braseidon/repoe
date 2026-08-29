@@ -14,6 +14,41 @@ class Type(BaseModel):
     tier: int
 
 
+class EssenceDisplayLine(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    category: str
+    label: str
+    mod: str
+
+
+class EssenceDisplayMods(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    Amulet: str | None = None
+    Armour: str | None = None
+    Belt: str | None = None
+    BodyArmour: str | None = None
+    Boots: str | None = None
+    Bow: str | None = None
+    Gloves: str | None = None
+    Helmet: str | None = None
+    Items: str | None = None
+    Jewellery: str | None = None
+    MeleeWeapon: str | None = None
+    OneHandWeapon: str | None = None
+    Quiver: str | None = None
+    RangedWeapon: str | None = None
+    Ring: str | None = None
+    Shield: str | None = None
+    TwoHandMeleeWeapon: str | None = None
+    TwoHandWeapon: str | None = None
+    Wand: str | None = None
+    Weapon: str | None = None
+
+
 class EssenceMods(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -46,8 +81,11 @@ class Essence(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
+    display_blocks: list[list[EssenceDisplayLine]] | None = None
+    display_mods: EssenceDisplayMods | None = None
     item_level_restriction: int | None = None
     level: int
+    level_restriction_text: str | None = None
     mods: EssenceMods | None = None
     name: str
     spawn_level_min: int

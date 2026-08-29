@@ -111,6 +111,8 @@ class BaseItemsSchemaValue(BaseModel):
     requirements: Requirements | None = None
     grants_buff: GrantsBuff | None = None
     skills_granted: list[str] | None = None
+    flavour_text_id: str | None = None
+    card_art_file: str | None = None
 
 
 class Model(RootModel[dict[str, BaseItemsSchemaValue]]):
