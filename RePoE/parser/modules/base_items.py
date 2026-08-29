@@ -156,7 +156,7 @@ ITEM_CLASS_REQUIRES_TYPE_DATA = {
     "Tincture": "tincture",
 }
 
-# DivinationCardArt.VirtualFile is a virtual path ("Art/2DItems/Divination/Images/TheDoctor"):
+# DivinationCardArt.ArtFile is a virtual path ("Art/2DItems/Divination/Images/TheDoctor"):
 # nothing lives there in the bundle index. It is a DESTINATION in this IDL, which maps it to
 # the real texture plus a crop box. Do not derive the texture path from the virtual one by
 # string rewriting: 469 of 470 happen to share a basename, but Abandoned Wealth's art is
@@ -167,7 +167,7 @@ DIVINATION_CARD_ART_IDL = "Art/UIDivinationImages.txt"
 def _card_art_dds_file(card_art_row: Optional[DatRecord]) -> Optional[str]:
     if card_art_row is None:
         return None
-    return card_art_row["VirtualFile"] + ".dds"
+    return card_art_row["ArtFile"] + ".dds"
 
 
 class base_items(Parser_Module):
@@ -247,7 +247,7 @@ class base_items(Parser_Module):
 
             card_art_file = root[item_id]["card_art_file"]
             if self.language == "English" and card_art_file:
-                sprite = card_art_sprites.get(card_art[item_id]["VirtualFile"])
+                sprite = card_art_sprites.get(card_art[item_id]["ArtFile"])
                 if sprite is None:
                     print(f"No {DIVINATION_CARD_ART_IDL} record for {card_art_file}")
                 else:
