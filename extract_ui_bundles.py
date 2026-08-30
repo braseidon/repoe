@@ -52,6 +52,12 @@ def _icon_dest(prefix: str, attr: str, suffix: str) -> str:
 PREFIX_BUNDLES: dict[str, str] = {
     "archetype-custom-portraits": "Art/2DArt/UIImages/InGame/ArchetypeSelect/Custom/",
     "archetype-class-icons": "Art/2DArt/UIImages/Common/Archetypes/",
+    # The whole Pantheon panel: the Kitava background the god circles are cut
+    # out of, the four large + one small cover frames, selection frames and
+    # glow pulses. The prefix also picks up the 4K/ variants nested under it.
+    # There is no per-god art — the gods are painted into the background, so
+    # each circle is a crop of it at that slot's coordinates.
+    "pantheon-panel": "Art/2DArt/UIImages/InGame/Pantheon/",
 }
 
 BUNDLES: dict[str, list[str]] = {
