@@ -51,11 +51,11 @@ def write_model(
     os.makedirs(os.path.join(data_path, *file_name.split("/")[:-1]), exist_ok=True)
     path = os.path.abspath(data_path + file_name)
     print("Writing '" + path + ".json' ...", end="", flush=True)
-    with io.open(path + ".json", mode="w") as out:
+    with io.open(path + ".json", mode="w", newline="\n") as out:
         out.write(root_obj.model_dump_json(indent=2, by_alias=True))
     print(" Done!")
     print("Writing '" + path + ".min.json' ...", end="", flush=True)
-    with io.open(path + ".min.json", mode="w") as out:
+    with io.open(path + ".min.json", mode="w", newline="\n") as out:
         out.write(root_obj.model_dump_json(exclude_unset=True, exclude_none=True, by_alias=True))
     print(" Done!")
 
@@ -69,7 +69,7 @@ def write_any_json(
     print("Writing '" + str(file_name) + ".json' ...", end="", flush=True)
     json.dump(
         root_obj,
-        io.open(os.path.join(data_path, file_name + ".json"), mode="w"),
+        io.open(os.path.join(data_path, file_name + ".json"), mode="w", newline="\n"),
         indent=2,
         sort_keys=True,
         default=lambda o: o.__dict__,
@@ -78,7 +78,7 @@ def write_any_json(
     print("Writing '" + str(file_name) + ".min.json' ...", end="", flush=True)
     json.dump(
         minimize(root_obj),
-        io.open(os.path.join(data_path, file_name + ".min.json"), mode="w"),
+        io.open(os.path.join(data_path, file_name + ".min.json"), mode="w", newline="\n"),
         separators=(",", ":"),
         sort_keys=True,
     )
@@ -102,7 +102,7 @@ def write_text(
     file_name: str,
 ) -> None:
     print("Writing '" + str(file_name) + "' ...", end="", flush=True)
-    with io.open(data_path + file_name, mode="w") as out:
+    with io.open(data_path + file_name, mode="w", newline="\n") as out:
         out.write(text)
     print(" Done!")
 
