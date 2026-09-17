@@ -40,6 +40,7 @@ _CLASS_ICONS = [
     ("StrInt", ""), ("StrInt", "Guardian"), ("StrInt", "Hierophant"), ("StrInt", "Inquisitor"),
     ("DexInt", ""), ("DexInt", "Assassin"), ("DexInt", "Saboteur"), ("DexInt", "Trickster"),
     ("StrDexInt", ""), ("StrDexInt", "Ascendant"), ("StrDexInt", "Reliquarian"),
+    ("StrDexInt", "Luminary"),
 ]
 
 
@@ -98,6 +99,8 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/ArchetypeSelect/DexInt/Saboteur",
     ],
     "tree-backgrounds": [
+        # Generic art; Reliquarian and Luminary ship no background of their own (3.29.3.3)
+        "Art/2DArt/UIImages/InGame/Classes/CustomAscendancy/PassiveSkillScreenBackground",
         "Art/2DArt/UIImages/InGame/Classes/Dex/Deadeye/PassiveSkillScreenBackground",
         "Art/2DArt/UIImages/InGame/Classes/Dex/Pathfinder/PassiveSkillScreenBackground",
         "Art/2DArt/UIImages/InGame/Classes/Dex/Raider/PassiveSkillScreenBackground",
