@@ -72,6 +72,12 @@ included in the data files.
   by jewel type (Vaal, Karui, Maraketh, Templar, Eternal, Kalguuran), with stat text, spawn
   weights, conqueror mappings, and version config (replacement weights, addition counts).
 - `world_areas.json`: Describes world areas (maps, acts, etc.) with their properties.
+- `mercenary_builds.json`: Describes mercenary builds with their skill pools, extra stats and weapon types. Infamous builds are nested in their regular build.
+- `mercenary_classes.json`: Describes mercenary classes with their house, attribute and monster varieties.
+- `mercenary_skills.json`: Describes mercenary skills keyed by granted effect id, with their possible supports and per-level data.
+- `mercenary_supports.json`: Describes mercenary supports with their tier, family, stats and stat text.
+- `mercenary_flavour_text.json`: Lists mercenary flavour text with the tag weights that select it.
+- `mercenary_inventories.json`: Lists the slots of the mercenary gear panel with their positions.
 
 ## Credits
 
