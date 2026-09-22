@@ -2,6 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
+from PyPoE.poe.file.translations import TranslationFileCache
+
 from RePoE.model import (
     mercenary_builds,
     mercenary_classes,
@@ -169,6 +171,16 @@ class PairInfamousTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             pair_infamous(self.builds(IdleSkill=None))
 
+    def test_an_unpaired_infamous_build_does_not_catch_a_later_infamous_id(self):
+        lone = build_entry(build_row("X", "Lone Infamous", True), [])
+        later = build_entry(build_row("XNoble", "Infamous of X", True), [])
+
+        builds, unpaired = pair_infamous({"X": lone, "XNoble": later})
+
+        self.assertEqual(["X", "XNoble"], sorted(unpaired))
+        self.assertIsNone(builds["X"]["infamous"])
+        self.assertIsNone(builds["XNoble"]["infamous"])
+
     def test_the_model_accepts_a_paired_build(self):
         builds, _ = pair_infamous(self.builds(Class=ref("MeleeAOEStrikeDuelist")))
 
@@ -230,7 +242,9 @@ class SkillEntryTest(unittest.TestCase):
 
     def test_keys_by_granted_effect_and_copies_only_the_named_converter_fields(self):
         entry, error = skill_entry(
-            skill_row("ShieldCrushMercenary", supports=["WitherOnHitHigh", "LeechLow"]), lambda ge: self.CONVERTED
+            skill_row("ShieldCrushMercenary", supports=["WitherOnHitHigh", "LeechLow"]),
+            lambda ge: self.CONVERTED,
+            False,
         )
 
         self.assertIsNone(error)
@@ -248,15 +262,22 @@ class SkillEntryTest(unittest.TestCase):
         def convert(ge):
             raise KeyError("ToxicRainMercenary")
 
-        entry, error = skill_entry(skill_row("ToxicRainMercenary", "Toxic Rain"), convert)
+        entry, error = skill_entry(skill_row("ToxicRainMercenary", "Toxic Rain"), convert, False)
 
         self.assertEqual("KeyError: 'ToxicRainMercenary'", error)
         self.assertNotIn("per_level", entry)
         mercenary_skills.Model({"ToxicRainMercenary": entry})
 
+    def test_raises_on_a_conversion_error_when_fail_fast(self):
+        def convert(ge):
+            raise KeyError("ToxicRainMercenary")
+
+        with self.assertRaises(KeyError):
+            skill_entry(skill_row("ToxicRainMercenary", "Toxic Rain"), convert, True)
+
     def test_raises_on_a_row_with_no_granted_effect(self):
         with self.assertRaises(ValueError):
-            skill_entry(skill_row("x", "Broken", granted_effect=False), lambda ge: {})
+            skill_entry(skill_row("x", "Broken", granted_effect=False), lambda ge: {}, False)
 
 
 class SupportEntryTest(unittest.TestCase):
@@ -380,6 +401,75 @@ class ExportIconsTest(unittest.TestCase):
         self.assertEqual(
             ["mercenaries: 1 of 5 icons not found", "  Art/2DItems/Gems/Support/WitherGemSupport.dds"], lines
         )
+
+
+class WriteTest(unittest.TestCase):
+    def reader(self):
+        class_row = {
+            "Id": "PhysicalDuelist",
+            "HouseName": "House Azadi",
+            "Attribute": ref("StrDex", Name="Str / Dex", Tags=[]),
+            "MonsterVariety": None,
+            "MonsterVarietyAllied": None,
+            "TerrainFeature": None,
+            "HouseSpawnChanceStats": [],
+            "AttributeSpawnChanceStats": [],
+            "ClassIcon": "",
+            "HouseIcon": "",
+            "HouseBuffIcon": "",
+        }
+        support_row = {
+            "Id": "WitherOnHitHigh",
+            "Name": "Greater Wither on Hit",
+            "Tier": 3,
+            "SupportFamily": None,
+            "GemIcon": "",
+            "Stats": [],
+            "StatValues": [],
+        }
+        flavour_row = {"Id": "NonEleBowRanger1", "Description": "", "Tags": [], "TagWeight": []}
+        inventory_row = {"Id": ref("BodyArmour1"), "PositionX": 0, "PositionY": 0}
+        return {
+            "MercenaryBuildVisualOverrides.dat64": [],
+            "MercenaryBuilds.dat64": [build_row()],
+            "MercenarySkills.dat64": [skill_row("ShieldCrushMercenary")],
+            "MercenarySupports.dat64": [support_row],
+            "MercenaryClasses.dat64": [class_row],
+            "MercenaryFlavourText.dat64": [flavour_row],
+            "MercenaryInventories.dat64": [inventory_row],
+        }
+
+    def write(self):
+        """Runs mercenaries.write() against the fake reader and a translation cache
+        whose only key is mercenary_support_stat_descriptions.txt, and returns the
+        written files keyed by name."""
+        translations = {"mercenary_support_stat_descriptions.txt": object()}
+        module = mercenaries(SimpleNamespace(), "out/", self.reader(), "French", {TranslationFileCache: translations})
+        written = {}
+        with mock.patch("RePoE.parser.modules.mercenaries.GemConverter") as gem_converter:
+            gem_converter.return_value.convert.return_value = {}
+            with mock.patch(
+                "RePoE.parser.modules.mercenaries.write_json",
+                side_effect=lambda data, path, name: written.__setitem__(name, data),
+            ):
+                with mock.patch("builtins.print"):
+                    module.write()
+        return written
+
+    def test_keys_skills_by_granted_effect_id(self):
+        written = self.write()
+
+        self.assertEqual(["ShieldCrushMercenary"], list(written["mercenary_skills"]))
+
+    def test_raises_when_the_support_translation_file_is_missing(self):
+        translations = {"gem_stat_descriptions.txt": object()}
+        module = mercenaries(SimpleNamespace(), "out/", self.reader(), "French", {TranslationFileCache: translations})
+
+        with self.assertRaises(KeyError):
+            with mock.patch("RePoE.parser.modules.mercenaries.GemConverter"):
+                with mock.patch("RePoE.parser.modules.mercenaries.write_json"):
+                    with mock.patch("builtins.print"):
+                        module.write()
 
 
 class KeyedTest(unittest.TestCase):
