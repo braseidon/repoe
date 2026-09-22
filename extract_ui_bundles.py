@@ -177,6 +177,21 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/RosePetalInfluencedItemSymbol",
         "Art/2DArt/UIImages/InGame/ZanaPetalsIcon",
     ],
+    # Mercenary database pages: the art MercenaryClasses names (ClassIcon, HouseIcon,
+    # HouseBuffIcon, all 4K) plus the support tier badges I to V. The data's tiers stop
+    # at 3 (3.29.3.3); badges IV and V exist as art with no support using them.
+    "mercenaries-4k": [
+        *[
+            f"Art/2DArt/UIImages/InGame/MercenariesofTrarthus/4k/{kind}{house}"
+            for kind in ("House", "HouseBuffIcon")
+            for house in ("Azadi", "Bardiya", "Cyaxan", "Keita")
+        ],
+        *[
+            f"Art/2DArt/UIImages/InGame/MercenariesofTrarthus/4k/MercClassIcon{cls}"
+            for cls in ("Duelist", "Marauder", "Ranger", "Scion", "Shadow", "Templar", "Witch")
+        ],
+        *[f"Art/2DArt/UIImages/InGame/MercenariesofTrarthus/4k/MercSupportTier{t}" for t in (1, 2, 3, 4, 5)],
+    ],
 }
 
 
