@@ -461,6 +461,23 @@ class WriteTest(unittest.TestCase):
 
         self.assertEqual(["ShieldCrushMercenary"], list(written["mercenary_skills"]))
 
+    def test_every_support_names_its_stat_translation_file(self):
+        reader = self.reader()
+        second = dict(reader["MercenarySupports.dat64"][0], Id="WitherOnHitLow", Tier=1)
+        reader["MercenarySupports.dat64"].append(second)
+        self.reader = lambda: reader
+
+        supports = self.write()["mercenary_supports"]
+
+        self.assertEqual(
+            {
+                "WitherOnHitHigh": "stat_translations/mercenary_support",
+                "WitherOnHitLow": "stat_translations/mercenary_support",
+            },
+            {support_id: support.get("stat_translation_file") for support_id, support in supports.items()},
+        )
+        mercenary_supports.Model(supports)
+
     def test_raises_when_the_support_translation_file_is_missing(self):
         translations = {"gem_stat_descriptions.txt": object()}
         module = mercenaries(SimpleNamespace(), "out/", self.reader(), "French", {TranslationFileCache: translations})
