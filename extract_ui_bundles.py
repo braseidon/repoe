@@ -59,6 +59,9 @@ PREFIX_BUNDLES: dict[str, str] = {
     # There is no per-god art — the gods are painted into the background, so
     # each circle is a crop of it at that slot's coordinates.
     "pantheon-panel": "Art/2DArt/UIImages/InGame/Pantheon/",
+    # Harbinger unique flavour text: FlavourText.dat writes it as <<HBGAa>>
+    # codes, one sprite per code, drawn inline by the client.
+    "harbinger-glyphs": "Art/2DArt/UIImages/InGame/HarbingerGlyph/",
 }
 
 BUNDLES: dict[str, list[str]] = {
