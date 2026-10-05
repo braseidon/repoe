@@ -180,6 +180,10 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/RosePetalInfluencedItemSymbol",
         "Art/2DArt/UIImages/InGame/ZanaPetalsIcon",
     ],
+    "thaumaturgic-dust": [
+        "Art/2DArt/UIImages/InGame/Village/Disenchanting/ThaumaturgicDust",
+        "Art/2DArt/UIImages/InGame/Village/RecombinateCrafting/ThaumaturgicDustDisplay",
+    ],
     # Mercenary UI art: the 4K crops of the art MercenaryClasses names
     # (ClassIcon, HouseIcon, HouseBuffIcon name the non-4K destinations; the same
     # basename sits under 4k/) plus the support tier badges I to V. The data's tiers
