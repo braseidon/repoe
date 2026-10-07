@@ -225,5 +225,9 @@ def export_image(
         if compose:
             image = compose(image)
         for ext in extensions:
-            image.save(dest + ext)
+            # Lossless: Pillow's default WebP is lossy quality 80, which smears
+            # sharp edges (red text on dark stone) and compounds with any
+            # re-encode downstream.
+            options = {"lossless": True} if ext == ".webp" else {}
+            image.save(dest + ext, **options)
     return True
