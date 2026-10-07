@@ -194,12 +194,17 @@ def compose_flask(img: Image):
     return Image.alpha_composite(middle, Image.alpha_composite(right, left))
 
 
+# Pillow's default is 80. 85 keeps fine edges noticeably cleaner for about
+# 10% more bytes on item art.
+WEBP_QUALITY = 85
+
+
 def export_image(
     ddsfile: str,
     data_path: str,
     file_system: FileSystem,
     outfile: str | None = None,
-    extensions=[".webp"],
+    extensions=[".png", ".webp"],
     compose: Callable[[Image], Image] | None = None,
 ) -> bool:
     dest = os.path.join(data_path, os.path.splitext(outfile or ddsfile)[0])
@@ -225,9 +230,8 @@ def export_image(
         if compose:
             image = compose(image)
         for ext in extensions:
-            # Lossless: Pillow's default WebP is lossy quality 80, which smears
-            # sharp edges (red text on dark stone) and compounds with any
-            # re-encode downstream.
-            options = {"lossless": True} if ext == ".webp" else {}
+            # PNG is the lossless master for anything that composites or
+            # re-encodes; WebP is one lossy pass, ready to serve as is.
+            options = {"quality": WEBP_QUALITY} if ext == ".webp" else {}
             image.save(dest + ext, **options)
     return True
