@@ -179,10 +179,15 @@ class GemConverter:
         relational_reader: RelationalReader,
         translation_file_cache: TranslationFileCache,
         language: str,
+        export_interpolation: bool = False,
     ) -> None:
         self.relational_reader = relational_reader
         self.translation_file_cache = translation_file_cache
         self.language = language
+        # When set, each float stat also carries the inputs its resolved value is computed
+        # from (FloatStatsValues, StatInterpolations, InterpolationBases), so the value can
+        # be recomputed at another level. Off for gems.json, which keeps its shape.
+        self.export_interpolation = export_interpolation
 
         self.gepls: Dict[str, List[DatRecord]] = {}
         for gepl in self.relational_reader["GrantedEffectsPerLevel.dat64"]:
@@ -388,8 +393,11 @@ class GemConverter:
         r["reservations"] = self._convert_reservations(gepl)
 
         stats = []
-        for k, v in zip(gesspl["FloatStats"], gesspl["BaseResolvedValues"]):
-            stats.append({"id": k["Id"], "value": v, "type": "float"})
+        for i, (k, v) in enumerate(zip(gesspl["FloatStats"], gesspl["BaseResolvedValues"])):
+            stat = {"id": k["Id"], "value": v, "type": "float"}
+            if self.export_interpolation:
+                stat.update(self._float_stat_interpolation(gesspl, i))
+            stats.append(stat)
         for k, v in zip(gess["ConstantStats"], gess["ConstantStatsValues"]):
             stats.append({"id": k["Id"], "value": v, "type": "constant"})
         for k, v in zip(gesspl["AdditionalStats"], gesspl["AdditionalStatsValues"]):
@@ -471,6 +479,31 @@ class GemConverter:
             r["stat_requirements"] = stat_requirements
 
         return r
+
+    @staticmethod
+    def _float_stat_interpolation(gesspl: DatRecord, index: int) -> Dict[str, Any]:
+        """The interpolation inputs of the float stat at index: its float value, the
+        interpolation kind and the EffectivenessCostConstants row it is divided by.
+        StatInterpolations covers the float stats first, then the additional stats."""
+        count = len(gesspl["FloatStats"])
+        expected = {
+            "FloatStatsValues": count,
+            "InterpolationBases": count,
+            "StatInterpolations": count + len(gesspl["AdditionalStats"]),
+        }
+        for column, length in expected.items():
+            if len(gesspl[column]) != length:
+                raise ValueError(
+                    f"GrantedEffectStatSetsPerLevel {gesspl['StatSet']['Id']} level {gesspl['GemLevel']}: "
+                    f"{length} expected but {len(gesspl[column])} {column}"
+                )
+        base = gesspl["InterpolationBases"][index]
+        return {
+            "float_value": gesspl["FloatStatsValues"][index],
+            "interpolation": gesspl["StatInterpolations"][index],
+            "interpolation_base": None if base is None else base["Id"],
+            "interpolation_base_multiplier": None if base is None else base["Multiplier"],
+        }
 
     @staticmethod
     def _convert_reservations(gepl: DatRecord) -> Union[Dict[str, float], Dict[str, int]]:

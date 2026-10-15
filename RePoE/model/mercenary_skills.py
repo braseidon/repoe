@@ -23,6 +23,18 @@ class ActiveSkill(BaseModel):
     minion_types: list[str] | None = None
 
 
+class MinionMonster(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    stat_id: str
+    stat_value: int
+    monster_variety: str
+    name: str
+    life_multiplier: int
+    is_player_minion: bool
+
+
 class StatType(Enum):
     float = "float"
     constant = "constant"
@@ -64,6 +76,10 @@ class Stat(BaseModel):
     id: str | None = None
     value: int | None = None
     type: StatType | None = None
+    float_value: float | None = None
+    interpolation: int | None = None
+    interpolation_base: str | None = None
+    interpolation_base_multiplier: float | None = None
 
 
 class SkillLevel(BaseModel):
@@ -108,6 +124,9 @@ class MercenarySkillsSchemaValue(BaseModel):
     per_level: dict[str, SkillLevel] | None = None
     static: SkillLevel | None = None
     tooltip_order: list[str] | None = None
+    base_effectiveness: float | None = None
+    incremental_effectiveness: float | None = None
+    minion_monsters: list[MinionMonster]
 
 
 class Model(RootModel[dict[str, MercenarySkillsSchemaValue]]):

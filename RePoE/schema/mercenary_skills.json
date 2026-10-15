@@ -65,6 +65,18 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "base_effectiveness": {
+                    "type": "number"
+                },
+                "incremental_effectiveness": {
+                    "type": "number"
+                },
+                "minion_monsters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/MinionMonster"
+                    }
                 }
             },
             "required": [
@@ -73,7 +85,8 @@
                 "description",
                 "required_level",
                 "possible_supports",
-                "house_icon"
+                "house_icon",
+                "minion_monsters"
             ],
             "title": "MercenarySkillsSchemaValue"
         },
@@ -222,10 +235,55 @@
                 },
                 "type": {
                     "$ref": "#/definitions/StatType"
+                },
+                "float_value": {
+                    "type": "number"
+                },
+                "interpolation": {
+                    "type": "integer"
+                },
+                "interpolation_base": {
+                    "type": "string"
+                },
+                "interpolation_base_multiplier": {
+                    "type": "number"
                 }
             },
             "required": [],
             "title": "Stat"
+        },
+        "MinionMonster": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "stat_id": {
+                    "type": "string"
+                },
+                "stat_value": {
+                    "type": "integer"
+                },
+                "monster_variety": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "life_multiplier": {
+                    "type": "integer"
+                },
+                "is_player_minion": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "stat_id",
+                "stat_value",
+                "monster_variety",
+                "name",
+                "life_multiplier",
+                "is_player_minion"
+            ],
+            "title": "MinionMonster"
         },
         "StatType": {
             "type": "string",

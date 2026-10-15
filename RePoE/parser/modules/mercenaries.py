@@ -7,7 +7,12 @@ Writes five files, each keyed by the row's game id:
   and cosmetic overrides. Infamous builds are rows of their own, marked is_infamous.
 - mercenary_classes.json: MercenaryClasses with their attribute.
 - mercenary_skills.json: MercenarySkills keyed by granted effect id, with the granted
-  effect converted the way gems.json converts gems.
+  effect converted the way gems.json converts gems. Float stats also carry their
+  interpolation inputs (float_value, interpolation, interpolation_base and its
+  multiplier), and each skill its stat set's base_effectiveness and
+  incremental_effectiveness, so a value can be recomputed at another level.
+  minion_monsters lists the monsters a skill summons through display_minion_monster_type
+  or alternate_minion, with their name, LifeMultiplier and MonsterTypes.IsPlayerMinion.
 - mercenary_supports.json: MercenarySupports with stat_text rendered through
   mercenary_support_stat_descriptions.txt, which stat_translation_file names.
 - mercenary_flavour_text.json: MercenaryFlavourText with its tag weights.
@@ -36,7 +41,23 @@ SUPPORT_STAT_TRANSLATION_FILE = get_stat_translation_file_name(SUPPORT_STAT_DESC
 
 # The GemConverter.convert(None, granted_effect) fields each skill carries. Top-level and
 # active_skill fields are filtered to these; per_level and static are copied whole.
-CONVERTED_SKILL_FIELDS = ("cast_time", "active_skill", "stat_translation_file", "per_level", "static", "tooltip_order")
+CONVERTED_SKILL_FIELDS = (
+    "cast_time",
+    "active_skill",
+    "stat_translation_file",
+    "per_level",
+    "static",
+    "tooltip_order",
+    "base_effectiveness",
+    "incremental_effectiveness",
+)
+
+# Constant stats whose value names the monster a skill summons, and the table that
+# value is a row id of.
+MINION_LINK_STATS = {
+    "display_minion_monster_type": "DisplayMinionMonsterType.dat64",
+    "alternate_minion": "SummonedSpecificMonsters.dat64",
+}
 ACTIVE_SKILL_FIELDS = (
     "id",
     "display_name",
@@ -146,6 +167,53 @@ def copy_converted(converted: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
+def granted_effect_stat_sets(granted_effect: Any) -> List[Any]:
+    return [s for s in [granted_effect["StatSet1"], *(granted_effect["StatSet2"] or [])] if s is not None]
+
+
+def minion_monster_entry(stat: str, value: int, variety: Any) -> Dict[str, Any]:
+    monster_type = variety["MonsterTypesKey"]
+    if monster_type is None:
+        raise ValueError(f"MonsterVarieties {variety['Id']} has no MonsterTypesKey")
+    return {
+        "stat_id": stat,
+        "stat_value": value,
+        "monster_variety": variety["Id"],
+        "name": variety["Name"],
+        "life_multiplier": variety["LifeMultiplier"],
+        "is_player_minion": bool(monster_type["IsPlayerMinion"]),
+    }
+
+
+def minion_monsters(
+    granted_effect: Any, links: Dict[str, Dict[int, Any]], per_level_rows: List[Any]
+) -> List[Dict[str, Any]]:
+    """The monsters a skill summons, reached through the constant stats in
+    MINION_LINK_STATS. A link stat outside the constant stats, or a value with no row in
+    its table, raises: the link would otherwise be lost without a trace."""
+    found: List[Dict[str, Any]] = []
+    for stat_set in granted_effect_stat_sets(granted_effect):
+        for stat, value in zip(stat_set["ConstantStats"], stat_set["ConstantStatsValues"]):
+            table = MINION_LINK_STATS.get(stat["Id"])
+            if table is None:
+                continue
+            link = links[table].get(value)
+            if link is None:
+                raise ValueError(f"{granted_effect['Id']}: {stat['Id']} {value} has no {table} row")
+            variety = link["MonsterVarietiesKey"]
+            if variety is None:
+                raise ValueError(f"{granted_effect['Id']}: {table} row {value} has no MonsterVarietiesKey")
+            found.append(minion_monster_entry(stat["Id"], value, variety))
+    for level_row in per_level_rows:
+        for column in ("FloatStats", "AdditionalStats", "AdditionalFlags"):
+            for stat in level_row[column]:
+                if stat["Id"] in MINION_LINK_STATS:
+                    raise ValueError(
+                        f"{granted_effect['Id']}: {stat['Id']} is a per-level {column} stat, not a constant"
+                    )
+    return found
+
+
 def skill_entry(
     row: Any, convert: Callable[[Any], Dict[str, Any]], fail_fast: bool
 ) -> Tuple[Dict[str, Any], Optional[str]]:
@@ -224,7 +292,8 @@ class mercenaries(Parser_Module):
         reader = self.relational_reader
         translations = self.get_cache(TranslationFileCache)
         support_stats = translations[SUPPORT_STAT_DESCRIPTIONS]
-        converter = GemConverter(self.file_system, reader, translations, self.language)
+        converter = GemConverter(self.file_system, reader, translations, self.language, export_interpolation=True)
+        links = {table: {row["Id"]: row for row in reader[table]} for table in MINION_LINK_STATS.values()}
 
         def translate(values: Dict[str, int]) -> Any:
             return support_stats.get_translation(values.keys(), values, full_result=True, lang=self.language)
@@ -247,6 +316,13 @@ class mercenaries(Parser_Module):
             entry, error = skill_entry(
                 row, lambda granted_effect: converter.convert(None, granted_effect), self.fail_fast
             )
+            granted_effect = row["GrantedEffect"]
+            per_level_rows = [
+                level_row
+                for stat_set in granted_effect_stat_sets(granted_effect)
+                for level_row in converter.gesspls.get(stat_set["Id"], [])
+            ]
+            entry["minion_monsters"] = minion_monsters(granted_effect, links, per_level_rows)
             skill_rows.append((skill_id(row), entry))
             if error is not None:
                 failed.append((skill_id(row), error))
