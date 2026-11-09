@@ -30,7 +30,7 @@ from RePoE.parser import Parser_Module
 from RePoE.parser.modules.gems import GemConverter
 from RePoE.parser.util import (
     call_with_default_args,
-    export_image,
+    export_icon,
     get_id_or_none,
     get_stat_translation_file_name,
     write_json,
@@ -359,7 +359,8 @@ class mercenaries(Parser_Module):
     def _export_icons(self, skills: Dict[str, Dict[str, Any]], supports: Dict[str, Dict[str, Any]]) -> None:
         paths = {path for skill in skills.values() for path in (skill["icon"], skill["house_icon"]) if path}
         paths |= {support["icon"] for support in supports.values() if support["icon"]}
-        missing = sorted(path for path in paths if not export_image(path, self.data_path, self.file_system))
+        # export_icon adds the 88x88 4K copy of a SkillIcons/ or BuffIcons/ icon when one exists.
+        missing = sorted(path for path in paths if not export_icon(path, self.data_path, self.file_system))
         print(f"mercenaries: {len(missing)} of {len(paths)} icons not found")
         for path in missing:
             print(f"  {path}")

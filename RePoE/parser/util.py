@@ -235,3 +235,47 @@ def export_image(
             options = {"quality": WEBP_QUALITY} if ext == ".webp" else {}
             image.save(dest + ext, **options)
     return True
+
+
+# Icon folders whose files the client also ships as a 4K copy: the same art drawn
+# at 88x88 instead of 64x64, in a "4K" folder beside the file
+# (Art/2DArt/SkillIcons/4K/Fireball.dds, Art/2DArt/SkillIcons/Vaal Skill Icons/4K/...,
+# Art/2DArt/BuffIcons/4K/...). Passive tree art under SkillIcons/passives/ is left out.
+_ICON_ROOTS_WITH_4K = ("art/2dart/skillicons/", "art/2dart/bufficons/")
+
+
+def icon_4k_path(ddsfile: str) -> str | None:
+    """The 4K copy's path for a skill or buff icon, or None for any other file."""
+    lower = ddsfile.lower()
+    if not lower.startswith(_ICON_ROOTS_WITH_4K) or lower.startswith("art/2dart/skillicons/passives/"):
+        return None
+    directory, name = ddsfile.rsplit("/", 1)
+    if directory.lower().endswith("/4k"):
+        return None
+    return f"{directory}/4K/{name}"
+
+
+def file_exists(file_system: FileSystem, path: str) -> bool:
+    if file_system.index:
+        try:
+            file_system.index.get_file_record(path)
+            return True
+        except FileNotFoundError:
+            pass
+    try:
+        file_system.get_file(path)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def export_icon(ddsfile: str, data_path: str, file_system: FileSystem) -> bool:
+    """export_image, plus the 4K copy of a skill or buff icon when the client ships one.
+
+    Returns whether the regular icon was exported; a missing 4K copy is normal.
+    """
+    exported = export_image(ddsfile, data_path, file_system)
+    path_4k = icon_4k_path(ddsfile)
+    if path_4k and file_exists(file_system, path_4k):
+        export_image(path_4k, data_path, file_system)
+    return exported

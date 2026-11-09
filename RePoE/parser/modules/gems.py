@@ -8,7 +8,14 @@ from PyPoE.poe.file.translations import TranslationFileCache, TranslationString
 from PyPoE.poe.sim.poe1formula import GemTypes, gem_stat_requirement
 from RePoE.parser import Parser_Module
 from RePoE.parser.constants import COOLDOWN_BYPASS_TYPES
-from RePoE.parser.util import call_with_default_args, export_image, get_release_state, get_stat_translation_file_name, write_json
+from RePoE.parser.util import (
+    call_with_default_args,
+    export_icon,
+    export_image,
+    get_release_state,
+    get_stat_translation_file_name,
+    write_json,
+)
 
 GEM_COLORS = {
     1: "trans",  # alt_x
@@ -744,11 +751,12 @@ class gems(Parser_Module):
             gems[ge_id] = converter.convert(None, granted_effect)
 
         # Export the skill bar icon of every effect that has one: gem skills, gem secondary
-        # skills and skills granted by mods alike (only gem skills were exported before).
+        # skills and skills granted by mods alike (only gem skills were exported before),
+        # plus the 88x88 4K copy of each icon when the client ships one.
         for effect in gems.values():
             active_skill = effect.get("active_skill")
             if active_skill and active_skill.get("icon"):
-                export_image(active_skill["icon"], self.data_path, self.file_system)
+                export_icon(active_skill["icon"], self.data_path, self.file_system)
 
         # Export gem overlay images (background effects for Exceptional/Trarthan gems)
         _GEM_OVERLAY_PATHS = [
