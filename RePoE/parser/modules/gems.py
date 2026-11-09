@@ -715,11 +715,6 @@ class gems(Parser_Module):
                 )
                 skill_gems.append({k: gems[ge_id][k] for k in gems[ge_id] if k != "per_level"})
 
-                # Export skill bar icon for active gems
-                active_skill = gems[ge_id].get("active_skill")
-                if active_skill and active_skill.get("icon"):
-                    export_image(active_skill["icon"], self.data_path, self.file_system)
-
                 # Secondary skills from gems. This adds the support skill implicitly provided by Bane
                 granted_effect = gem_effect["GrantedEffect2"]
                 if not granted_effect:
@@ -747,6 +742,13 @@ class gems(Parser_Module):
             if ge_id != "PlayerMelee":
                 continue
             gems[ge_id] = converter.convert(None, granted_effect)
+
+        # Export the skill bar icon of every effect that has one: gem skills, gem secondary
+        # skills and skills granted by mods alike (only gem skills were exported before).
+        for effect in gems.values():
+            active_skill = effect.get("active_skill")
+            if active_skill and active_skill.get("icon"):
+                export_image(active_skill["icon"], self.data_path, self.file_system)
 
         # Export gem overlay images (background effects for Exceptional/Trarthan gems)
         _GEM_OVERLAY_PATHS = [
