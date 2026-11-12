@@ -14,6 +14,7 @@ from RePoE.parser.util import (
     export_image,
     get_release_state,
     get_stat_translation_file_name,
+    write_any_json,
     write_json,
 )
 
@@ -248,6 +249,8 @@ class GemConverter:
         except Exception:
             print("Warning: Could not load Projectiles.dat64 for projectile speed data")
 
+        # Active skill id -> the filter section a variant inherits (the `_alt_` retry below).
+        self.inherited_stat_filters: Dict[str, Any] = {}
         self.skill_stat_filter = StatFilterFile()
         self.skill_stat_filter.read(file_system.get_file("Metadata/StatDescriptions/skillpopup_stat_filters.txt"))
 
@@ -661,6 +664,8 @@ class GemConverter:
             base_id = re.sub(r"_alt_[xyz]$", "", skill_id)
             if base_id != skill_id:
                 stat_filter_group = self.skill_stat_filter.skills.get(base_id)
+                if stat_filter_group is not None:
+                    self.inherited_stat_filters[skill_id] = stat_filter_group
         if stat_filter_group is not None:
             return stat_filter_group.translation_file_path.replace("Metadata/StatDescriptions/", "")
         else:
@@ -782,6 +787,34 @@ class gems(Parser_Module):
 
         write_json(gems, self.data_path, "gems")
         write_json(skill_gems, self.data_path, "gems_minimal")
+        write_any_json(self._skill_popup_stats(converter), self.data_path, "skill_popup_stats")
+
+    def _skill_popup_stats(self, converter: GemConverter) -> Dict[str, Any]:
+        """
+        skillpopup_stat_filters.txt as data: which descriptions each active skill's popup prints.
+
+        - groups: group name -> its lines (description names, `$<group>` for a nested group).
+        - skills: active skill id -> its description file and its lines as written, `copy`
+          lines and the `_alt_` variants resolved to the section they read.
+        - descriptions: description file -> description name -> the stat ids of each
+          description of that name, looked up in the file and the files it includes. A stat
+          here need not be one a skill stores: the client computes some of them.
+        """
+        stat_filter = converter.skill_stat_filter
+        skills: Dict[str, Any] = {}
+        descriptions: Dict[str, Dict[str, List[List[str]]]] = {}
+        for skill_id, entry in (stat_filter.skills | converter.inherited_stat_filters).items():
+            game_file = entry.translation_file_path.replace("Metadata/StatDescriptions/", "")
+            file_name = get_stat_translation_file_name(game_file)
+            skills[skill_id] = {"stat_translation_file": file_name, "entries": entry.entries}
+            if file_name in descriptions:
+                continue
+            by_name: Dict[str, List[List[str]]] = {}
+            for translation in converter.translation_file_cache[game_file].translations:
+                if translation.identifier:
+                    by_name.setdefault(translation.identifier, []).append(list(translation.ids))
+            descriptions[file_name] = by_name
+        return {"groups": stat_filter.groups, "skills": skills, "descriptions": descriptions}
 
 
 if __name__ == "__main__":
