@@ -743,6 +743,17 @@ class gems(Parser_Module):
                     continue
                 gems[ge_id] = converter.convert(None, granted_effect)
 
+        # Skills from passives: a skill only a passive grants is neither gem nor mod effect
+        for passive in relational_reader["PassiveSkills.dat64"]:
+            granted_effect_per_level = passive["GrantedEffectsPerLevel"]
+            if granted_effect_per_level is None:
+                continue
+            granted_effect = granted_effect_per_level["GrantedEffect"]
+            ge_id = granted_effect["Id"]
+            if ge_id in gems:
+                continue
+            gems[ge_id] = converter.convert(None, granted_effect)
+
         # Default Attack/PlayerMelee is neither gem nor mod effect
         for granted_effect in relational_reader["GrantedEffects.dat64"]:
             ge_id = granted_effect["Id"]

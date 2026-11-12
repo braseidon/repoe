@@ -16,6 +16,7 @@ class Costs(BaseModel):
     )
     Mana: Optional[int] = None
     Life: Optional[int] = None
+    LifePercent: Optional[int] = None
     ManaPerMinute: Optional[int] = None
     ManaPercent: Optional[int] = None
     ManaPercentPerMinute: Optional[int] = None

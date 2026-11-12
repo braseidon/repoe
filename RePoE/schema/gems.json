@@ -227,6 +227,9 @@
                 "Life": {
                     "type": "integer"
                 },
+                "LifePercent": {
+                    "type": "integer"
+                },
                 "ManaPerMinute": {
                     "type": "integer"
                 },

@@ -107,6 +107,10 @@ class passives(Parser_Module):
                 result["ascendancy"] = passive["AscendancyKey"]["Name"]
         if passive["Icon_DDSFile"]:
             result["icon"] = passive["Icon_DDSFile"]
+        # The skill a passive grants when allocated, with the level it grants it at.
+        granted = passive["GrantedEffectsPerLevel"]
+        if granted:
+            result["granted_effect"] = {"id": granted["GrantedEffect"]["Id"], "level": granted["Level"]}
         stats = dict(zip([stat["Id"] for stat in passive["Stats"]], [passive[f"Stat{i}Value"] for i in range(1, 5)]))
         result["stats"] = stats
         if translation_file:
