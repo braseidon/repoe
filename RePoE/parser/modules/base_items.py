@@ -143,7 +143,6 @@ ITEM_CLASS_BLACKLIST = {
     "HarvestInfrastructure",
     "HarvestSeed",
     "HarvestPlantBooster",
-    "Trinket",
     "HeistObjective",
     "HiddenItem",
     "ArchnemesisMod",
