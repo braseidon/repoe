@@ -13,6 +13,14 @@ class PantheonsStat(BaseModel):
     value: int
 
 
+class PantheonsUnlockMonster(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: str
+    name: str
+
+
 class PantheonsUnlock(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -21,6 +29,7 @@ class PantheonsUnlock(BaseModel):
     world_area_name: str
     monster_id: str
     monster_name: str
+    monsters: Optional[List[PantheonsUnlockMonster]] = None
     description: str
     vessel_id: str
     vessel_name: str

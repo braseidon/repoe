@@ -82,7 +82,8 @@ class passives(Parser_Module):
         return psg
 
     def uiart(self, row):
-        result = {"ornament": row["Ornament"]}
+        # 3.30.0 moved the ornament out of PassiveSkillTreeUIArt; it is not exported until the new column is named
+        result = {}
         bg = row["BackgroundArt"]
         for size in ["Small", "Medium", "Large"]:
             for blank in [False, True]:

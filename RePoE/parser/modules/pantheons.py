@@ -167,17 +167,21 @@ class pantheons(Parser_Module):
             raise ValueError(f"{god_id} slot {slot}: PantheonSouls row has no WorldArea")
 
         monsters = row["CapturedMonster"] or []
-        if len(monsters) != 1:
-            raise ValueError(
-                f"{god_id} slot {slot}: CapturedMonster holds {len(monsters)} entries;"
-                " the flat monster_id/monster_name pair can only carry one"
-            )
+        if len(monsters) < 1:
+            raise ValueError(f"{god_id} slot {slot}: CapturedMonster is empty")
 
         vessel = row["CapturedVessel"]
         if vessel is None:
             raise ValueError(f"{god_id} slot {slot}: PantheonSouls row has no CapturedVessel")
 
+        # 3.30.0: a row can list several monsters (Lunaris slot 2 lists the three Mutewind leaders).
+        # monster_id/monster_name stay the first one; "monsters" carries the whole list when there is more than one.
+        extra = (
+            {"monsters": [{"id": m["Id"], "name": m["Name"]} for m in monsters]} if len(monsters) > 1 else {}
+        )
+
         return {
+            **extra,
             "world_area_id": world_area["Id"],
             "world_area_name": world_area["Name"],
             "monster_id": monsters[0]["Id"],
