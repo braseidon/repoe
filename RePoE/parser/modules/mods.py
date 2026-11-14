@@ -123,7 +123,7 @@ class GrantedEffectLines:
     DISPLAY_STAT_PREFIX = "local_display_"
 
     # Before 3.30 these stats' descriptions did not follow the "Level N <name>" form (no level,
-    # or a different opening such as "Socketed Slam Gems are Supported by"). What the client
+    # or wording of their own). What the client
     # prints for them now is not known, so their mods get no line rather than a guessed one.
     UNKNOWN_FORM_STATS = frozenset(
         {
@@ -133,9 +133,6 @@ class GrantedEffectLines:
             "local_display_socketed_gems_supported_by_level_x_snipe",
         }
     )
-    # "Socketed Slam Gems are Supported by Level 25 Earthbreaker": its stat is shared with a
-    # mod of the usual form, so this one is named by mod.
-    UNKNOWN_FORM_MODS = frozenset({"OneAncestorTotemBuffUnique__1"})
 
     def __init__(self, relational_reader) -> None:
         strings = {
@@ -182,7 +179,7 @@ class GrantedEffectLines:
         lines when the stat is the mod's first, after them otherwise.
         """
         granted = mod["GrantedEffectsPerLevelKeys"]
-        if not granted or mod["Id"] in self.UNKNOWN_FORM_MODS:
+        if not granted:
             return lines, None
         display_stats, leads = self._display_stats(mod, undescribed_ids)
         line = self._line(granted, display_stats)
