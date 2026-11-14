@@ -24,6 +24,12 @@ as value. That description object has the following fields:
   `GrantedEffectsPerLevel.dat64`. These can be resolved with `gems.json`:
   `granted_effect_id` is a key in the root dictionary and `level` is a key in the 
   `per_level` object of the object for `granted_effect_id`.
+- `granted_effect_text`: The line the client writes itself for a granted skill or support
+  ("Grants Level 20 Death Wish", "Socketed Gems are Supported by Level 15 Faster Attacks
+  Support"). Since 3.30 these lines have no stat description: the display stat stays on
+  the mod with a value of 0 and the client fills a `ClientStrings` template with the first
+  granted effect's name and level. The line is also part of `text`. `null` when the mod
+  has no such line, or when its form is not known.
 
 **Spawning/generating**
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, FrozenSet, List, Optional, Set, Union
+from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple, Union
 
 from PyPoE.poe.file.dat import DatRecord
 from PyPoE.poe.file.translations import install_data_dependant_quantifiers, TranslationFileCache
@@ -67,7 +67,7 @@ def _translate_mod(
     translation_cache: TranslationFileCache,
     exclude_ids: FrozenSet[str] = frozenset(),
     lang: str = "English",
-) -> List[str]:
+) -> Tuple[List[str], List[str]]:
     constants = mod.parent.constants
     ids: List[str] = []
     values: List[List[int]] = []
@@ -81,9 +81,8 @@ def _translate_mod(
         ids.append(stat_id)
         values.append([mod["Stat%sMin" % i], mod["Stat%sMax" % i]])
     tf_name = get_translation_file_from_domain(mod["Domain"], constants)
-    return translation_cache[tf_name].get_translation(
-        ids, values, full_result=True, lang=lang
-    ).lines
+    result = translation_cache[tf_name].get_translation(ids, values, full_result=True, lang=lang)
+    return result.lines, result.missing_ids
 
 
 def _convert_spawn_weights(spawn_weights: zip) -> List[Dict[str, Any]]:
@@ -111,6 +110,104 @@ def _convert_granted_effects(granted_effects_per_level: List[DatRecord]) -> List
     return [
         {"granted_effect_id": gepl["GrantedEffect"]["Id"], "level": gepl["Level"]} for gepl in granted_effects_per_level
     ]
+
+
+class GrantedEffectLines:
+    """The line the client writes itself for a mod that grants a skill or a support.
+
+    Since 3.30 such a mod has no stat description for it: the display stat stays on the mod
+    with a value of 0 (a few keep their value and only lost the description) and the client
+    fills a ClientStrings template with the granted effect's name and level.
+    """
+
+    DISPLAY_STAT_PREFIX = "local_display_"
+
+    # Before 3.30 these stats' descriptions did not follow the "Level N <name>" form (no level,
+    # or a different opening such as "Socketed Slam Gems are Supported by"). What the client
+    # prints for them now is not known, so their mods get no line rather than a guessed one.
+    UNKNOWN_FORM_STATS = frozenset(
+        {
+            "local_display_summon_harbinger_x_on_equip",
+            "local_display_socketed_gems_have_iron_will",
+            "local_display_grants_skill_call_of_steel",
+            "local_display_socketed_gems_supported_by_level_x_snipe",
+        }
+    )
+    # "Socketed Slam Gems are Supported by Level 25 Earthbreaker": its stat is shared with a
+    # mod of the usual form, so this one is named by mod.
+    UNKNOWN_FORM_MODS = frozenset({"OneAncestorTotemBuffUnique__1"})
+
+    def __init__(self, relational_reader) -> None:
+        strings = {
+            row["Id"]: row["Text"]
+            for row in relational_reader["ClientStrings.dat64"]
+            if row["Id"] in ("ModGrantsEffectWithLevel", "ModGrantsSupportEffectWithLevel")
+        }
+        self.skill_template: str = strings["ModGrantsEffectWithLevel"]
+        self.support_template: str = strings["ModGrantsSupportEffectWithLevel"]
+        # a support prints its gem's name; a support with no gem has no name to print
+        self.support_names: Dict[str, str] = {}
+        # a gem's first effect names it before any gem that only carries the effect as its second
+        for column in ("GrantedEffect", "GrantedEffect2"):
+            for gem in relational_reader["SkillGems.dat64"]:
+                for gem_effect in gem["GemEffects"]:
+                    granted_effect = gem_effect[column]
+                    if granted_effect is None or not granted_effect["IsSupport"]:
+                        continue
+                    name = gem_effect["SupportName"] or gem_effect["Name"] or gem["BaseItemTypesKey"]["Name"]
+                    if name:
+                        self.support_names.setdefault(granted_effect["Id"], name)
+
+    def _display_stats(self, mod: DatRecord, undescribed_ids: List[str]) -> Tuple[List[str], bool]:
+        """The mod's display stats that have no description, and whether one is its first stat."""
+        ids = []
+        leads = False
+        first = True
+        for i in mod.parent.constants.MOD_STATS_RANGE:
+            stat = mod["StatsKey%s" % i]
+            if stat is None:
+                continue
+            if stat["Id"].startswith(self.DISPLAY_STAT_PREFIX):
+                zeroed = mod["Stat%sMin" % i] == 0 and mod["Stat%sMax" % i] == 0
+                if zeroed or stat["Id"] in undescribed_ids:
+                    ids.append(stat["Id"])
+                    leads = leads or first
+            first = False
+        return ids, leads
+
+    def add_line(self, mod: DatRecord, lines: List[str], undescribed_ids: List[str]) -> Tuple[List[str], Optional[str]]:
+        """The mod's lines with the client-written one in place, and that line by itself.
+
+        The line sits where the display stat sits among the mod's stats: before the other
+        lines when the stat is the mod's first, after them otherwise.
+        """
+        granted = mod["GrantedEffectsPerLevelKeys"]
+        if not granted or mod["Id"] in self.UNKNOWN_FORM_MODS:
+            return lines, None
+        display_stats, leads = self._display_stats(mod, undescribed_ids)
+        line = self._line(granted, display_stats)
+        if line is None:
+            return lines, None
+        return ([line] + lines if leads else lines + [line]), line
+
+    def _line(self, granted: List[DatRecord], display_stats: List[str]) -> Optional[str]:
+        # A mod with no display stat is not covered: some print the line (a 3.30 unique with
+        # no stats at all), others are hidden companions of a mod that words the skill itself.
+        if not display_stats or any(stat_id in self.UNKNOWN_FORM_STATS for stat_id in display_stats):
+            return None
+        # only the first effect prints: a second one is its hidden triggered companion
+        per_level = granted[0]
+        granted_effect = per_level["GrantedEffect"]
+        if granted_effect["IsSupport"]:
+            name = self.support_names.get(granted_effect["Id"])
+            template = self.support_template
+        else:
+            active_skill = granted_effect["ActiveSkill"]
+            name = active_skill["DisplayedName"] if active_skill else None
+            template = self.skill_template
+        if not name:
+            return None
+        return template.format(name, per_level["Level"])
 
 
 def _convert_tags_keys(tags_keys: List[DatRecord]) -> List[str]:
@@ -152,6 +249,8 @@ def _to_slim(obj: Dict[str, Any]) -> Dict[str, Any]:
         slim["crafting_item_class_restrictions"] = obj["crafting_item_class_restrictions"]
     if obj.get("buff_template"):
         slim["buff_template"] = obj["buff_template"]
+    if obj.get("granted_effect_text"):
+        slim["granted_effect_text"] = obj["granted_effect_text"]
     return slim
 
 
@@ -160,18 +259,21 @@ class mods(Parser_Module):
         root = {}
         translation_cache = self.get_cache(TranslationFileCache)
         install_data_dependant_quantifiers(self.relational_reader)
+        granted_effect_lines = GrantedEffectLines(self.relational_reader)
         for mod in self.relational_reader["Mods.dat64"]:
             domain = MOD_DOMAIN_FIX.get(mod["Id"], mod["Domain"])
 
             buff_template_stat_ids = frozenset(_get_buff_template_stat_ids(mod))
 
             try:
-                lines = _translate_mod(
+                lines, undescribed_ids = _translate_mod(
                     mod, translation_cache, exclude_ids=buff_template_stat_ids, lang=self.language
                 )
             except Exception as e:
                 print("could not get text for mod", mod["Id"], e)
-                lines = []
+                lines, undescribed_ids = [], []
+
+            lines, granted_effect_text = granted_effect_lines.add_line(mod, lines, undescribed_ids)
 
             obj = {
                 "required_level": mod["Level"],
@@ -192,6 +294,7 @@ class mods(Parser_Module):
                     ic["Id"] for ic in mod["CraftingItemClassRestrictions"]
                 ],
                 "buff_template": _convert_buff_template(mod),
+                "granted_effect_text": granted_effect_text,
             }
             if mod["Id"] in root:
                 print("Duplicate mod id:", mod["Id"])

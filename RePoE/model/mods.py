@@ -84,6 +84,7 @@ class ModsSchemaValue(BaseModel):
     type: str
     gold_value: Optional[float] = None
     buff_template: Optional[BuffTemplate] = None
+    granted_effect_text: Optional[str] = None
 
 
 class Model(RootModel[Optional[Dict[str, ModsSchemaValue]]]):
