@@ -122,15 +122,16 @@ class GrantedEffectLines:
 
     DISPLAY_STAT_PREFIX = "local_display_"
 
-    # Before 3.30 these stats' descriptions did not follow the "Level N <name>" form (no level,
-    # or wording of their own). What the client
-    # prints for them now is not known, so their mods get no line rather than a guessed one.
+    # The Harbinger skills print without a level ("Grants Summon Harbinger of Time"). Nothing
+    # in the effect's data marks that, so the mods are found by their display stat.
+    NO_LEVEL_STATS = frozenset({"local_display_summon_harbinger_x_on_equip"})
+
+    # Before 3.30 these stats' descriptions had no level either. What the client prints for
+    # them now is not known, so their mods get no line rather than a guessed one.
     UNKNOWN_FORM_STATS = frozenset(
         {
-            "local_display_summon_harbinger_x_on_equip",
             "local_display_socketed_gems_have_iron_will",
             "local_display_grants_skill_call_of_steel",
-            "local_display_socketed_gems_supported_by_level_x_snipe",
         }
     )
 
@@ -138,9 +139,10 @@ class GrantedEffectLines:
         strings = {
             row["Id"]: row["Text"]
             for row in relational_reader["ClientStrings.dat64"]
-            if row["Id"] in ("ModGrantsEffectWithLevel", "ModGrantsSupportEffectWithLevel")
+            if row["Id"] in ("ModGrantsEffect", "ModGrantsEffectWithLevel", "ModGrantsSupportEffectWithLevel")
         }
         self.skill_template: str = strings["ModGrantsEffectWithLevel"]
+        self.skill_template_no_level: str = strings["ModGrantsEffect"]
         self.support_template: str = strings["ModGrantsSupportEffectWithLevel"]
         # a support prints its gem's name; a support with no gem has no name to print
         self.support_names: Dict[str, str] = {}
@@ -202,6 +204,8 @@ class GrantedEffectLines:
             active_skill = granted_effect["ActiveSkill"]
             name = active_skill["DisplayedName"] if active_skill else None
             template = self.skill_template
+            if any(stat_id in self.NO_LEVEL_STATS for stat_id in display_stats):
+                template = self.skill_template_no_level
         if not name:
             return None
         return template.format(name, per_level["Level"])
