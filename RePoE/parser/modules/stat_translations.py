@@ -295,7 +295,11 @@ class stat_translations(Parser_Module):
                             else None
                         ),
                         "values": {
-                            str(r[handler.index_column] if handler.index_column else r.rowid): r[handler.value_column]
+                            # keyed by the stat value: a handler without an index column counts rows
+                            # from index_start; format_value turns a referenced row into its text
+                            str(
+                                r[handler.index_column] if handler.index_column else r.rowid + handler.index_start
+                            ): handler.format_value(r[handler.value_column])
                             for r in handler.table
                             if r[handler.value_column]
                             and (not handler.predicate or r[handler.predicate[0]] == handler.predicate[1])
