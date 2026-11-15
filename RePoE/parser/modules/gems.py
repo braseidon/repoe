@@ -8,6 +8,7 @@ from PyPoE.poe.file.translations import TranslationFileCache, TranslationString
 from PyPoE.poe.sim.poe1formula import GemTypes, gem_stat_requirement
 from RePoE.parser import Parser_Module
 from RePoE.parser.constants import COOLDOWN_BYPASS_TYPES
+from RePoE.parser.summoned_monsters import link_tables, summoned_varieties
 from RePoE.parser.util import (
     call_with_default_args,
     export_icon,
@@ -194,7 +195,8 @@ class GemConverter:
         self.language = language
         # When set, each float stat also carries the inputs its resolved value is computed
         # from (FloatStatsValues, StatInterpolations, InterpolationBases), so the value can
-        # be recomputed at another level. Off for gems.json, which keeps its shape.
+        # be recomputed at another level. Off for gems.json, which keeps its shape, except
+        # for the skills of monsters mercenary skills summon.
         self.export_interpolation = export_interpolation
 
         self.gepls: Dict[str, List[DatRecord]] = {}
@@ -765,6 +767,22 @@ class gems(Parser_Module):
             if ge_id != "PlayerMelee":
                 continue
             gems[ge_id] = converter.convert(None, granted_effect)
+
+        # Skills of the monsters mercenary skills summon. They are monster skills with one
+        # level whose numbers follow the monster's level, so their float stats also carry
+        # the interpolation inputs. An effect already written above keeps its row.
+        links = link_tables(relational_reader)
+        converter.export_interpolation = True
+        try:
+            for mercenary_skill in relational_reader["MercenarySkills.dat64"]:
+                for _, _, variety in summoned_varieties(mercenary_skill["GrantedEffect"], links):
+                    for granted_effect in variety["GrantedEffectsKeys"]:
+                        ge_id = granted_effect["Id"]
+                        if ge_id in gems:
+                            continue
+                        gems[ge_id] = converter.convert(None, granted_effect)
+        finally:
+            converter.export_interpolation = False
 
         # Export the skill bar icon of every effect that has one: gem skills, gem secondary
         # skills and skills granted by mods alike (only gem skills were exported before),

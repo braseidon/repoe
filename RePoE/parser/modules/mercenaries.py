@@ -13,6 +13,11 @@ Writes five files, each keyed by the row's game id:
   incremental_effectiveness, so a value can be recomputed at another level.
   minion_monsters lists the monsters a skill summons through display_minion_monster_type
   or alternate_minion, with their name, LifeMultiplier and MonsterTypes.IsPlayerMinion.
+- mercenary_minions.json: each monster a minion_monsters entry names, keyed by its
+  MonsterVarieties id (the entry's monster_variety): its multipliers and attack time,
+  its MonsterTypes row with that row's MonsterResistances, its mods and the ids of the
+  granted effects it uses. Those effects are written to gems.json. Values are the
+  table values as stored.
 - mercenary_supports.json: MercenarySupports with stat_text rendered through
   mercenary_support_stat_descriptions.txt, which stat_translation_file names.
 - mercenary_flavour_text.json: MercenaryFlavourText with its tag weights.
@@ -28,6 +33,12 @@ from PyPoE.poe.file.translations import TranslationFileCache
 
 from RePoE.parser import Parser_Module
 from RePoE.parser.modules.gems import GemConverter
+from RePoE.parser.summoned_monsters import (
+    MINION_LINK_STATS,
+    granted_effect_stat_sets,
+    link_tables,
+    summoned_varieties,
+)
 from RePoE.parser.util import (
     call_with_default_args,
     export_icon,
@@ -52,12 +63,6 @@ CONVERTED_SKILL_FIELDS = (
     "incremental_effectiveness",
 )
 
-# Constant stats whose value names the monster a skill summons, and the table that
-# value is a row id of.
-MINION_LINK_STATS = {
-    "display_minion_monster_type": "DisplayMinionMonsterType.dat64",
-    "alternate_minion": "SummonedSpecificMonsters.dat64",
-}
 ACTIVE_SKILL_FIELDS = (
     "id",
     "display_name",
@@ -165,8 +170,50 @@ def copy_converted(converted: Dict[str, Any]) -> Dict[str, Any]:
     return out
 
 
-def granted_effect_stat_sets(granted_effect: Any) -> List[Any]:
-    return [s for s in [granted_effect["StatSet1"], *(granted_effect["StatSet2"] or [])] if s is not None]
+def resistances_entry(row: Any) -> Dict[str, Any]:
+    return {
+        "id": row["Id"],
+        **{
+            f"{element.lower()}_{difficulty.lower()}": row[f"{element}{difficulty}"]
+            for difficulty in ("Normal", "Cruel", "Merciless")
+            for element in ("Fire", "Cold", "Lightning", "Chaos")
+        },
+    }
+
+
+def monster_type_entry(row: Any) -> Dict[str, Any]:
+    resistances = row["Resistances"]
+    return {
+        "id": row["Id"],
+        "accuracy": row["Accuracy"],
+        "is_player_minion": bool(row["IsPlayerMinion"]),
+        "armour": row["Armour"],
+        "evasion": row["Evasion"],
+        "energy_shield": row["EnergyShield"],
+        "damage_spread": row["DamageSpread"],
+        "resistances": None if resistances is None else resistances_entry(resistances),
+        "alt_life1": bool(row["AltLife1"]),
+        "alt_life2": bool(row["AltLife2"]),
+        "base_damage_ignores_attack_speed": bool(row["BaseDamageIgnoresAttackSpeed"]),
+    }
+
+
+def minion_entry(variety: Any) -> Dict[str, Any]:
+    """A summoned monster: MonsterVarieties columns as stored (AttackSpeed is the attack
+    time in milliseconds) and its MonsterTypes row."""
+    monster_type = variety["MonsterTypesKey"]
+    if monster_type is None:
+        raise ValueError(f"MonsterVarieties {variety['Id']} has no MonsterTypesKey")
+    return {
+        "name": variety["Name"],
+        "life_multiplier": variety["LifeMultiplier"],
+        "damage_multiplier": variety["DamageMultiplier"],
+        "attack_speed": variety["AttackSpeed"],
+        "monster_type": monster_type_entry(monster_type),
+        "mods": ids(variety["ModsKeys"]),
+        "mods2": ids(variety["ModsKeys2"]),
+        "granted_effects": ids(variety["GrantedEffectsKeys"]),
+    }
 
 
 def minion_monster_entry(stat: str, value: int, variety: Any) -> Dict[str, Any]:
@@ -189,19 +236,9 @@ def minion_monsters(
     """The monsters a skill summons, reached through the constant stats in
     MINION_LINK_STATS. A link stat outside the constant stats, or a value with no row in
     its table, raises: the link would otherwise be lost without a trace."""
-    found: List[Dict[str, Any]] = []
-    for stat_set in granted_effect_stat_sets(granted_effect):
-        for stat, value in zip(stat_set["ConstantStats"], stat_set["ConstantStatsValues"]):
-            table = MINION_LINK_STATS.get(stat["Id"])
-            if table is None:
-                continue
-            link = links[table].get(value)
-            if link is None:
-                raise ValueError(f"{granted_effect['Id']}: {stat['Id']} {value} has no {table} row")
-            variety = link["MonsterVarietiesKey"]
-            if variety is None:
-                raise ValueError(f"{granted_effect['Id']}: {table} row {value} has no MonsterVarietiesKey")
-            found.append(minion_monster_entry(stat["Id"], value, variety))
+    found = [
+        minion_monster_entry(stat, value, variety) for stat, value, variety in summoned_varieties(granted_effect, links)
+    ]
     for level_row in per_level_rows:
         for column in ("FloatStats", "AdditionalStats", "AdditionalFlags"):
             for stat in level_row[column]:
@@ -291,7 +328,7 @@ class mercenaries(Parser_Module):
         translations = self.get_cache(TranslationFileCache)
         support_stats = translations[SUPPORT_STAT_DESCRIPTIONS]
         converter = GemConverter(self.file_system, reader, translations, self.language, export_interpolation=True)
-        links = {table: {row["Id"]: row for row in reader[table]} for table in MINION_LINK_STATS.values()}
+        links = link_tables(reader)
 
         def translate(values: Dict[str, int]) -> Any:
             return support_stats.get_translation(values.keys(), values, full_result=True, lang=self.language)
@@ -309,6 +346,7 @@ class mercenaries(Parser_Module):
         )
 
         skill_rows: List[Tuple[str, Dict[str, Any]]] = []
+        minions: Dict[str, Dict[str, Any]] = {}
         failed: List[Tuple[str, str]] = []
         for row in reader["MercenarySkills.dat64"]:
             entry, error = skill_entry(
@@ -321,6 +359,9 @@ class mercenaries(Parser_Module):
                 for level_row in converter.gesspls.get(stat_set["Id"], [])
             ]
             entry["minion_monsters"] = minion_monsters(granted_effect, links, per_level_rows)
+            for _, _, variety in summoned_varieties(granted_effect, links):
+                if variety["Id"] not in minions:
+                    minions[variety["Id"]] = minion_entry(variety)
             skill_rows.append((skill_id(row), entry))
             if error is not None:
                 failed.append((skill_id(row), error))
@@ -351,6 +392,7 @@ class mercenaries(Parser_Module):
         write_json(builds, self.data_path, "mercenary_builds")
         write_json(classes, self.data_path, "mercenary_classes")
         write_json(skills, self.data_path, "mercenary_skills")
+        write_json(dict(sorted(minions.items())), self.data_path, "mercenary_minions")
         write_json(supports, self.data_path, "mercenary_supports")
         write_json(flavour_text, self.data_path, "mercenary_flavour_text")
 

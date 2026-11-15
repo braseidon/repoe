@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/definitions/MercenaryMinionsSchemaValue"
+  },
+  "definitions": {
+    "MercenaryMinionsSchemaValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "life_multiplier": {
+          "type": "integer"
+        },
+        "damage_multiplier": {
+          "type": "integer"
+        },
+        "attack_speed": {
+          "type": "integer"
+        },
+        "monster_type": {
+          "$ref": "#/definitions/MonsterType"
+        },
+        "mods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "mods2": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "granted_effects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "life_multiplier",
+        "damage_multiplier",
+        "attack_speed",
+        "monster_type",
+        "mods",
+        "mods2",
+        "granted_effects"
+      ],
+      "title": "MercenaryMinionsSchemaValue"
+    },
+    "MonsterType": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "accuracy": {
+          "type": "integer"
+        },
+        "is_player_minion": {
+          "type": "boolean"
+        },
+        "armour": {
+          "type": "integer"
+        },
+        "evasion": {
+          "type": "integer"
+        },
+        "energy_shield": {
+          "type": "integer"
+        },
+        "damage_spread": {
+          "type": "integer"
+        },
+        "resistances": {
+          "$ref": "#/definitions/Resistances"
+        },
+        "alt_life1": {
+          "type": "boolean"
+        },
+        "alt_life2": {
+          "type": "boolean"
+        },
+        "base_damage_ignores_attack_speed": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "accuracy",
+        "is_player_minion",
+        "armour",
+        "evasion",
+        "energy_shield",
+        "damage_spread",
+        "alt_life1",
+        "alt_life2",
+        "base_damage_ignores_attack_speed"
+      ],
+      "title": "MonsterType"
+    },
+    "Resistances": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "fire_normal": { "type": "integer" },
+        "cold_normal": { "type": "integer" },
+        "lightning_normal": { "type": "integer" },
+        "chaos_normal": { "type": "integer" },
+        "fire_cruel": { "type": "integer" },
+        "cold_cruel": { "type": "integer" },
+        "lightning_cruel": { "type": "integer" },
+        "chaos_cruel": { "type": "integer" },
+        "fire_merciless": { "type": "integer" },
+        "cold_merciless": { "type": "integer" },
+        "lightning_merciless": { "type": "integer" },
+        "chaos_merciless": { "type": "integer" }
+      },
+      "required": [
+        "id",
+        "fire_normal",
+        "cold_normal",
+        "lightning_normal",
+        "chaos_normal",
+        "fire_cruel",
+        "cold_cruel",
+        "lightning_cruel",
+        "chaos_cruel",
+        "fire_merciless",
+        "cold_merciless",
+        "lightning_merciless",
+        "chaos_merciless"
+      ],
+      "title": "Resistances"
+    }
+  }
+}

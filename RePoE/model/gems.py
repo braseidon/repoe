@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, RootModel
 
@@ -155,6 +155,21 @@ class Stat(BaseModel):
     type: Optional[StatType] = None
 
 
+class InterpolatedStat(BaseModel):
+    """A float stat with the inputs its value is computed from (export_interpolation)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    value: Optional[int] = None
+    id: Optional[str] = None
+    type: Optional[StatType] = None
+    float_value: Optional[float] = None
+    interpolation: Optional[int] = None
+    interpolation_base: Optional[str] = None
+    interpolation_base_multiplier: Optional[float] = None
+
+
 class QuestReward(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -173,7 +188,7 @@ class Static(BaseModel):
     quality_stats: List[QualityStat]
     stat_requirements: Optional[StatRequirements] = None
     stat_text: Optional[Dict[str, str]] = None
-    stats: Optional[List[Optional[Stat]]] = None
+    stats: Optional[List[Optional[Union[Stat, InterpolatedStat]]]] = None
     cooldown: Optional[int] = None
     stored_uses: Optional[int] = None
     required_level: Optional[int] = None
@@ -210,7 +225,7 @@ class PerLevel(BaseModel):
     required_level: Optional[int] = None
     stat_requirements: Optional[StatRequirements] = None
     stat_text: Optional[Dict[str, str]] = None
-    stats: Optional[List[Optional[Stat]]] = None
+    stats: Optional[List[Optional[Union[Stat, InterpolatedStat]]]] = None
     reservations: Optional[PerLevelReservations] = None
     damage_effectiveness: Optional[int] = None
     damage_multiplier: Optional[int] = None
