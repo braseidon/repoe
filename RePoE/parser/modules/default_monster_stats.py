@@ -13,6 +13,7 @@ class default_monster_stats(Parser_Module):
                 "life": row["Life"],
                 "experience": row["Experience"],
                 "ally_life": row["AllyLife"],
+                "ally_damage": row["MinionDamage"],
                 "armour": row["Armour"],
             }
         write_json(root, self.data_path, "default_monster_stats")

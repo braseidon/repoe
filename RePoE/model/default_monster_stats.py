@@ -12,6 +12,7 @@ class DefaultMonsterStatsSchemaValue(BaseModel):
     )
     accuracy: int
     ally_life: int
+    ally_damage: float
     armour: int
     evasion: int
     life: int

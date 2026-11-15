@@ -15,6 +15,9 @@
                 "ally_life": {
                     "type": "integer"
                 },
+                "ally_damage": {
+                    "type": "number"
+                },
                 "armour": {
                     "type": "integer"
                 },
@@ -34,6 +37,7 @@
             "required": [
                 "accuracy",
                 "ally_life",
+                "ally_damage",
                 "armour",
                 "evasion",
                 "life",
