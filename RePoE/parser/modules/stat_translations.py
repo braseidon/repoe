@@ -12,6 +12,7 @@ from PyPoE.poe.file.translations import (
     TranslationRange,
     TranslationQuantifier,
     TranslationQuantifierHandler,
+    TQAlternateTreeKeystone,
     TQNumberFormat,
     TQRelationalData,
     get_custom_translation_file,
@@ -305,6 +306,18 @@ class stat_translations(Parser_Module):
                             and (not handler.predicate or r[handler.predicate[0]] == handler.predicate[1])
                         },
                     }
+                )
+            elif isinstance(handler, TQAlternateTreeKeystone):
+                # keyed by version row, keystone index, then revision; the stat values that supply
+                # the version and revision are named by the handler's arguments in the description
+                keystones = defaultdict(lambda: defaultdict(dict))
+                for (version, keystone, revision), name in sorted(handler.names.items()):
+                    if name:
+                        keystones[str(version)][str(keystone)][str(revision)] = name
+                quantifiers[handler_name] = stat_value_handlers.AlternateTreeKeystone(
+                    type="alternate_tree_keystone",
+                    dat_file="AlternateTreeVersionKeystones.dat64",
+                    values=keystones,
                 )
             elif handler.type == TranslationQuantifier.QuantifierTypes.STRING:
                 quantifiers[handler_name] = stat_value_handlers.CanonicalLine(type=handler.type.name.lower())

@@ -69,5 +69,21 @@ class RelationalData(BaseModel):
     predicate: Predicate | None = None
 
 
-class Model(RootModel[dict[str, IntHandler | RelationalData | CanonicalLine | Noop]]):
-    root: dict[str, IntHandler | RelationalData | CanonicalLine | Noop]
+class Type4(Enum):
+    alternate_tree_keystone = "alternate_tree_keystone"
+
+
+class AlternateTreeKeystone(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    dat_file: str
+    type: Type4
+    values: dict[str, dict[str, dict[str, str]]] = Field(
+        ...,
+        description="Map from alternate tree version, then keystone index, then revision to the keystone name. A stat value prints the name of the highest revision at or below its own revision",
+    )
+
+
+class Model(RootModel[dict[str, IntHandler | RelationalData | CanonicalLine | Noop | AlternateTreeKeystone]]):
+    root: dict[str, IntHandler | RelationalData | CanonicalLine | Noop | AlternateTreeKeystone]

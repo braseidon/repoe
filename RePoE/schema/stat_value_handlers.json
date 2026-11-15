@@ -14,6 +14,9 @@
             },
             {
                 "$ref": "#/definitions/Noop"
+            },
+            {
+                "$ref": "#/definitions/AlternateTreeKeystone"
             }
         ]
     },
@@ -131,6 +134,40 @@
                 "type"
             ],
             "title": "Noop"
+        },
+        "AlternateTreeKeystone": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "dat_file": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "alternate_tree_keystone"
+                    ]
+                },
+                "values": {
+                    "type": "object",
+                    "description": "Map from alternate tree version, then keystone index, then revision to the keystone name. A stat value prints the name of the highest revision at or below its own revision",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "required": [
+                "type",
+                "dat_file",
+                "values"
+            ],
+            "title": "AlternateTreeKeystone"
         }
     }
 }
