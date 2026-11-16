@@ -211,10 +211,41 @@ BUNDLES: dict[str, list[str]] = {
         "Art/2DArt/UIImages/InGame/ItemsSupportSocketHighlight",
         "Art/2DArt/UIImages/InGame/4K/ItemsSupportSocketHighlight",
     ],
+    # Item-socket sprites (inventory sockets, Delve socketed, highlight, active-gem
+    # sockets) at 1x and 4K, plus small sprites added in 3.30 that could be the icon
+    # drawn before an imbued support's name in a gem tooltip. Candidates for a
+    # comparison sheet; none confirmed in-game.
+    "item-sockets": [
+        *[
+            f"Art/2DArt/UIImages/InGame/{scale}ItemsSocket{colour}"
+            for scale in ("", "4K/")
+            for colour in ("Red", "Green", "Blue", "White")
+        ],
+        *[
+            f"Art/2DArt/UIImages/InGame/{scale}ItemsActiveSocketed{colour}"
+            for scale in ("", "4K/")
+            for colour in ("Red", "Green", "Blue", "White")
+        ],
+        "Art/2DArt/UIImages/InGame/ItemsDelveSocketed",  # no 4K variant exists
+        "Art/2DArt/UIImages/InGame/ItemSocketHighlight",
+        "Art/2DArt/UIImages/InGame/4K/ItemSocketHighlight",
+        # 3.30 additions drawn at about 20-65px (names do not say socket or imbue).
+        *[
+            f"Art/2DArt/UIImages/InGame/Augury/{scale}{name}"
+            for scale in ("", "4k/")
+            for name in (
+                "CardTier1", "CardTier2", "CardTier3", "RewardIconCircleFrame",
+                "AuguryRewardIconGems", "AuguryRewardIconExceptionalGems",
+            )
+        ],
+        "Art/2DArt/UIImages/Common/FourDropPanelBox",
+        "Art/2DArt/UIImages/InGame/AtlasScreen/AtlasMultinodeNumberFrame",
+        "Art/2DArt/UIImages/InGame/AtlasScreen/AtlasMultinodeNumberFrameActive",
+    ],
 }
 
 # Bundles saved as lossless WebP (the rest use quality 95).
-LOSSLESS_BUNDLES = {"support-sockets"}
+LOSSLESS_BUNDLES = {"support-sockets", "item-sockets"}
 
 
 def extract_record(fs: FileSystem, record, out_path: str, lossless: bool = False) -> None:
