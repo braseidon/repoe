@@ -200,10 +200,24 @@ BUNDLES: dict[str, list[str]] = {
         ],
         *[f"Art/2DArt/UIImages/InGame/MercenariesofTrarthus/4k/MercSupportTier{t}" for t in (1, 2, 3, 4, 5)],
     ],
+    # Support-gem socket icons: the coloured sockets drawn beside a socketed
+    # support gem (Red, Green, Blue, White) and the highlight overlay, at 1x and 4K.
+    "support-sockets": [
+        *[
+            f"Art/2DArt/UIImages/InGame/{scale}ItemsSupportSocketed{colour}"
+            for scale in ("", "4K/")
+            for colour in ("Red", "Green", "Blue", "White")
+        ],
+        "Art/2DArt/UIImages/InGame/ItemsSupportSocketHighlight",
+        "Art/2DArt/UIImages/InGame/4K/ItemsSupportSocketHighlight",
+    ],
 }
 
+# Bundles saved as lossless WebP (the rest use quality 95).
+LOSSLESS_BUNDLES = {"support-sockets"}
 
-def extract_record(fs: FileSystem, record, out_path: str) -> None:
+
+def extract_record(fs: FileSystem, record, out_path: str, lossless: bool = False) -> None:
     dds_bytes = fs.extract_dds(fs.get_file(record.source))
     if not dds_bytes or dds_bytes[:4] != b"DDS ":
         print(f"  SKIP (not a DDS): {record.source}")
@@ -211,7 +225,10 @@ def extract_record(fs: FileSystem, record, out_path: str) -> None:
     with Image.open(BytesIO(dds_bytes)) as img:
         cropped = img.crop((record.x1, record.y1, record.x2 + 1, record.y2 + 1))
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-        cropped.save(out_path + ".webp", "WEBP", quality=95, method=6)
+        if lossless:
+            cropped.save(out_path + ".webp", "WEBP", lossless=True, method=6)
+        else:
+            cropped.save(out_path + ".webp", "WEBP", quality=95, method=6)
 
 
 def main() -> None:
@@ -254,7 +271,7 @@ def main() -> None:
                 # Not a UIImages path at all (e.g. the UIDivinationImages card frames).
                 tail = dest.rsplit("/", 1)[-1]
             out_path = os.path.join(OUT_ROOT, bundle_name, tail)
-            extract_record(fs, record, out_path)
+            extract_record(fs, record, out_path, lossless=bundle_name in LOSSLESS_BUNDLES)
             total += 1
             print(f"  OK  {tail}.webp  ({record.x2 - record.x1 + 1}x{record.y2 - record.y1 + 1})")
     print(f"\nExtracted {total} images to {OUT_ROOT}")
