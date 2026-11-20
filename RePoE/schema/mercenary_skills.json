@@ -77,6 +77,9 @@
                     "items": {
                         "$ref": "#/definitions/MinionMonster"
                     }
+                },
+                "add_buff_to_target": {
+                    "$ref": "#/definitions/AddBuffToTarget"
                 }
             },
             "required": [
@@ -284,6 +287,48 @@
                 "is_player_minion"
             ],
             "title": "MinionMonster"
+        },
+        "AddBuffToTarget": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "buff_id": {
+                    "type": "string"
+                },
+                "buff_name": {
+                    "type": "string"
+                },
+                "buff_description": {
+                    "type": "string"
+                },
+                "buff_stats": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "stat_values": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "skill_stats": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "buff_id",
+                "buff_name",
+                "buff_description",
+                "buff_stats",
+                "stat_values",
+                "skill_stats"
+            ],
+            "title": "AddBuffToTarget"
         },
         "StatType": {
             "type": "string",

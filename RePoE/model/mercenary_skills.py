@@ -35,6 +35,18 @@ class MinionMonster(BaseModel):
     is_player_minion: bool
 
 
+class AddBuffToTarget(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    buff_id: str
+    buff_name: str
+    buff_description: str
+    buff_stats: list[str]
+    stat_values: list[int]
+    skill_stats: list[str]
+
+
 class StatType(Enum):
     float = "float"
     constant = "constant"
@@ -127,6 +139,7 @@ class MercenarySkillsSchemaValue(BaseModel):
     base_effectiveness: float | None = None
     incremental_effectiveness: float | None = None
     minion_monsters: list[MinionMonster]
+    add_buff_to_target: AddBuffToTarget | None = None
 
 
 class Model(RootModel[dict[str, MercenarySkillsSchemaValue]]):

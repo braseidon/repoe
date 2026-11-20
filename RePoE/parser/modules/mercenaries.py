@@ -13,6 +13,8 @@ Writes five files, each keyed by the row's game id:
   incremental_effectiveness, so a value can be recomputed at another level.
   minion_monsters lists the monsters a skill summons through display_minion_monster_type
   or alternate_minion, with their name, LifeMultiplier and MonsterTypes.IsPlayerMinion.
+  add_buff_to_target skills also carry add_buff_to_target: the buff their
+  AddBuffToTargetVarieties row applies, its stats and the row's stat values.
 - mercenary_minions.json: each monster a minion_monsters entry names, keyed by its
   MonsterVarieties id (the entry's monster_variety): its multipliers and attack time,
   its MonsterTypes row with that row's MonsterResistances, its mods and the ids of the
@@ -249,6 +251,37 @@ def minion_monsters(
     return found
 
 
+ADD_BUFF_TO_TARGET = "add_buff_to_target"
+
+
+def add_buff_to_target_entry(granted_effect: Any, varieties: Any) -> Optional[Dict[str, Any]]:
+    """The buff an add_buff_to_target skill applies, or None for any other skill. No column
+    keys into AddBuffToTargetVarieties: the granted effect's SkillID is the row index. A
+    SkillID with no row, or a row with no buff, raises."""
+    active_skill = granted_effect["ActiveSkill"]
+    if active_skill is None or active_skill["Id"] != ADD_BUFF_TO_TARGET:
+        return None
+    index = granted_effect["SkillID"]
+    if not 0 <= index < len(varieties.table_data):
+        raise ValueError(f"{granted_effect['Id']}: SkillID {index} has no AddBuffToTargetVarieties row")
+    variety = varieties[index]
+    buff = variety["BuffDefinitions"]
+    if buff is None:
+        raise ValueError(f"{granted_effect['Id']}: AddBuffToTargetVarieties row {index} has no BuffDefinitions")
+    return {
+        "buff_id": buff["Id"],
+        "buff_name": buff["Name"],
+        "buff_description": buff["Description"],
+        "buff_stats": ids(buff["StatsKeys"]),
+        # Data0 is unnamed in the spec. Read as the buff stat values in buff_stats order: on 19
+        # rows its length equals the buff's stat count, on 61 it is empty and the row's own
+        # StatsKeys is set instead, on 5 it is shorter than the stat list.
+        "stat_values": list(variety["Data0"]),
+        # Stats whose value the buff takes from the skill's own stat set.
+        "skill_stats": ids(variety["StatsKeys"]),
+    }
+
+
 def skill_entry(
     row: Any, convert: Callable[[Any], Dict[str, Any]], fail_fast: bool
 ) -> Tuple[Dict[str, Any], Optional[str]]:
@@ -329,6 +362,7 @@ class mercenaries(Parser_Module):
         support_stats = translations[SUPPORT_STAT_DESCRIPTIONS]
         converter = GemConverter(self.file_system, reader, translations, self.language, export_interpolation=True)
         links = link_tables(reader)
+        buff_varieties = reader["AddBuffToTargetVarieties.dat64"]
 
         def translate(values: Dict[str, int]) -> Any:
             return support_stats.get_translation(values.keys(), values, full_result=True, lang=self.language)
@@ -359,6 +393,9 @@ class mercenaries(Parser_Module):
                 for level_row in converter.gesspls.get(stat_set["Id"], [])
             ]
             entry["minion_monsters"] = minion_monsters(granted_effect, links, per_level_rows)
+            buff = add_buff_to_target_entry(granted_effect, buff_varieties)
+            if buff is not None:
+                entry["add_buff_to_target"] = buff
             for _, _, variety in summoned_varieties(granted_effect, links):
                 if variety["Id"] not in minions:
                     minions[variety["Id"]] = minion_entry(variety)
