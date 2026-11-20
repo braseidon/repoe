@@ -72,6 +72,12 @@
                 "incremental_effectiveness": {
                     "type": "number"
                 },
+                "stat_set_levels": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/StatSetLevel"
+                    }
+                },
                 "minion_monsters": {
                     "type": "array",
                     "items": {
@@ -150,6 +156,26 @@
                 "weapon_restrictions"
             ],
             "title": "ActiveSkill"
+        },
+        "StatSetLevel": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "required_level": {
+                    "type": "number"
+                },
+                "stats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Stat"
+                    }
+                }
+            },
+            "required": [
+                "required_level",
+                "stats"
+            ],
+            "title": "StatSetLevel"
         },
         "SkillLevel": {
             "type": "object",

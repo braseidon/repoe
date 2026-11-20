@@ -195,7 +195,7 @@ class GemConverter:
         self.language = language
         # When set, each float stat also carries the inputs its resolved value is computed
         # from (FloatStatsValues, StatInterpolations, InterpolationBases), so the value can
-        # be recomputed at another level. Off for gems.json, which keeps its shape, except
+        # be recomputed at another level, and each additional stat its StatInterpolations kind. Off for gems.json, which keeps its shape, except
         # for the skills of monsters mercenary skills summon.
         self.export_interpolation = export_interpolation
 
@@ -412,8 +412,11 @@ class GemConverter:
             stats.append(stat)
         for k, v in zip(gess["ConstantStats"], gess["ConstantStatsValues"]):
             stats.append({"id": k["Id"], "value": v, "type": "constant"})
-        for k, v in zip(gesspl["AdditionalStats"], gesspl["AdditionalStatsValues"]):
-            stats.append({"id": k["Id"], "value": v, "type": "additional"})
+        for i, (k, v) in enumerate(zip(gesspl["AdditionalStats"], gesspl["AdditionalStatsValues"])):
+            stat = {"id": k["Id"], "value": v, "type": "additional"}
+            if self.export_interpolation:
+                stat.update(self._additional_stat_interpolation(gesspl, i))
+            stats.append(stat)
         for k in gess["ImplicitStats"]:
             stats.append({"id": k["Id"], "value": 1, "type": "implicit"})
         for k in gesspl["AdditionalFlags"]:
@@ -493,10 +496,9 @@ class GemConverter:
         return r
 
     @staticmethod
-    def _float_stat_interpolation(gesspl: DatRecord, index: int) -> Dict[str, Any]:
-        """The interpolation inputs of the float stat at index: its float value, the
-        interpolation kind and the EffectivenessCostConstants row it is divided by.
-        StatInterpolations covers the float stats first, then the additional stats."""
+    def _check_interpolation_columns(gesspl: DatRecord) -> None:
+        """StatInterpolations covers the float stats first, then the additional stats;
+        FloatStatsValues and InterpolationBases cover the float stats only."""
         count = len(gesspl["FloatStats"])
         expected = {
             "FloatStatsValues": count,
@@ -509,6 +511,40 @@ class GemConverter:
                     f"GrantedEffectStatSetsPerLevel {gesspl['StatSet']['Id']} level {gesspl['GemLevel']}: "
                     f"{length} expected but {len(gesspl[column])} {column}"
                 )
+
+    @staticmethod
+    def _additional_stat_interpolation(gesspl: DatRecord, index: int) -> Dict[str, Any]:
+        """The interpolation kind of the additional stat at index."""
+        GemConverter._check_interpolation_columns(gesspl)
+        return {"interpolation": gesspl["StatInterpolations"][len(gesspl["FloatStats"]) + index]}
+
+    def stat_set_levels(self, granted_effect: DatRecord) -> Dict[str, Dict[str, Any]]:
+        """Every GrantedEffectStatSetsPerLevel row of the effect's stat set, keyed by its
+        level, with the player level it requires and its float and additional stats with
+        their interpolation inputs. A row with no GrantedEffectsPerLevel row of the same
+        level is included, so values between rows can be derived from the row inputs."""
+        rows = sorted(self.gesspls.get(granted_effect["StatSet"]["Id"], []), key=lambda row: row["GemLevel"])
+        levels = {}
+        for gesspl in rows:
+            stats = []
+            for i, (k, v) in enumerate(zip(gesspl["FloatStats"], gesspl["BaseResolvedValues"])):
+                stats.append({"id": k["Id"], "value": v, "type": "float", **self._float_stat_interpolation(gesspl, i)})
+            for i, (k, v) in enumerate(zip(gesspl["AdditionalStats"], gesspl["AdditionalStatsValues"])):
+                stats.append(
+                    {"id": k["Id"], "value": v, "type": "additional", **self._additional_stat_interpolation(gesspl, i)}
+                )
+            required_level = gesspl["PlayerLevelReq"]
+            levels[str(gesspl["GemLevel"])] = {
+                "required_level": int(required_level) if int(required_level) == required_level else required_level,
+                "stats": stats,
+            }
+        return levels
+
+    @staticmethod
+    def _float_stat_interpolation(gesspl: DatRecord, index: int) -> Dict[str, Any]:
+        """The interpolation inputs of the float stat at index: its float value, the
+        interpolation kind and the EffectivenessCostConstants row it is divided by."""
+        GemConverter._check_interpolation_columns(gesspl)
         base = gesspl["InterpolationBases"][index]
         return {
             "float_value": gesspl["FloatStatsValues"][index],

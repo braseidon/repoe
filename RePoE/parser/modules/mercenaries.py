@@ -63,6 +63,7 @@ CONVERTED_SKILL_FIELDS = (
     "tooltip_order",
     "base_effectiveness",
     "incremental_effectiveness",
+    "stat_set_levels",
 )
 
 ACTIVE_SKILL_FIELDS = (
@@ -367,6 +368,11 @@ class mercenaries(Parser_Module):
         def translate(values: Dict[str, int]) -> Any:
             return support_stats.get_translation(values.keys(), values, full_result=True, lang=self.language)
 
+        def convert(granted_effect: Any) -> Dict[str, Any]:
+            converted = converter.convert(None, granted_effect)
+            converted["stat_set_levels"] = converter.stat_set_levels(granted_effect)
+            return converted
+
         overrides = reader["MercenaryBuildVisualOverrides.dat64"]
         overrides.build_index("Id")
 
@@ -383,9 +389,7 @@ class mercenaries(Parser_Module):
         minions: Dict[str, Dict[str, Any]] = {}
         failed: List[Tuple[str, str]] = []
         for row in reader["MercenarySkills.dat64"]:
-            entry, error = skill_entry(
-                row, lambda granted_effect: converter.convert(None, granted_effect), self.fail_fast
-            )
+            entry, error = skill_entry(row, convert, self.fail_fast)
             granted_effect = row["GrantedEffect"]
             per_level_rows = [
                 level_row

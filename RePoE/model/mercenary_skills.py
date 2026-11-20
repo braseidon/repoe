@@ -116,6 +116,14 @@ class SkillLevel(BaseModel):
     quality_stats: list[QualityStat] | None = None
 
 
+class StatSetLevel(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    required_level: int | float
+    stats: list[Stat]
+
+
 class MercenarySkillsSchemaValue(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -138,6 +146,7 @@ class MercenarySkillsSchemaValue(BaseModel):
     tooltip_order: list[str] | None = None
     base_effectiveness: float | None = None
     incremental_effectiveness: float | None = None
+    stat_set_levels: dict[str, StatSetLevel] | None = None
     minion_monsters: list[MinionMonster]
     add_buff_to_target: AddBuffToTarget | None = None
 
