@@ -299,10 +299,11 @@ class stat_translations(Parser_Module):
                             else None
                         ),
                         "values": {
-                            # keyed by the stat value: a handler without an index column counts rows
-                            # from index_start; format_value turns a referenced row into its text
+                            # keyed by the stat value, the inverse of the handler's lookup: the value
+                            # minus index_start is the row's index column, or its row id when the
+                            # handler has none; format_value turns a referenced row into its text
                             str(
-                                r[handler.index_column] if handler.index_column else r.rowid + handler.index_start
+                                (r[handler.index_column] if handler.index_column else r.rowid) + handler.index_start
                             ): handler.format_value(r[handler.value_column])
                             for r in handler.table
                             if r[handler.value_column]
