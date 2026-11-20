@@ -3,7 +3,7 @@ from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple, Union
 from PyPoE.poe.file.dat import DatRecord
 from PyPoE.poe.file.translations import install_data_dependant_quantifiers, TranslationFileCache
 from PyPoE.poe.poe1constants import MOD_DOMAIN
-from PyPoE.poe.sim.mods import get_translation_file_from_domain
+from PyPoE.poe.sim.mods import get_mod_translation_file
 
 from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, write_any_json, write_json
@@ -80,7 +80,7 @@ def _translate_mod(
             continue
         ids.append(stat_id)
         values.append([mod["Stat%sMin" % i], mod["Stat%sMax" % i]])
-    tf_name = get_translation_file_from_domain(mod["Domain"], constants)
+    tf_name = get_mod_translation_file(mod, constants)
     result = translation_cache[tf_name].get_translation(ids, values, full_result=True, lang=lang)
     return result.lines, result.missing_ids
 

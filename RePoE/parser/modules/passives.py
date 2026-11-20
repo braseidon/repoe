@@ -1,6 +1,6 @@
 import os.path
 
-from PyPoE.poe.file.psg import PSGFile
+from PyPoE.poe.file.psg2 import PSGFile
 from PyPoE.poe.file.translations import TranslationFileCache
 from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, write_any_json
@@ -82,8 +82,7 @@ class passives(Parser_Module):
         return psg
 
     def uiart(self, row):
-        # 3.30.0 moved the ornament out of PassiveSkillTreeUIArt; it is not exported until the new column is named
-        result = {}
+        result = {"ornament": row["ConnectionArt"]["Ornament1"]}
         bg = row["BackgroundArt"]
         for size in ["Small", "Medium", "Large"]:
             for blank in [False, True]:

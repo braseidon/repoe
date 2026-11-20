@@ -26,8 +26,8 @@ from RePoE.parser import Parser_Module
 from RePoE.parser.util import call_with_default_args, get_stat_translation_file_name, write_json, write_model
 
 
-# When two different stats have the same text, the trade site tells them apart by appending a 
-# parenthetical that does not exist in game data, e.g. "+# to Armour (Local)". Pair each trade 
+# When two different stats have the same text, the trade site tells them apart by appending a
+# parenthetical that does not exist in game data, e.g. "+# to Armour (Local)". Pair each trade
 # site suffix with a check for the stat ids that should use it.
 TRADE_STAT_SUFFIXES = {
     " (Local)": lambda ids: any(id.startswith("local_") for id in ids),
@@ -111,20 +111,23 @@ class stat_translations(Parser_Module):
                 use_placeholder=placeholder,
             )
             trade_format = self._disambiguate(trade_format, s.translation.ids)
-            if trade_format in self.trade_stats:
-                for trade_stat in self.trade_stats[trade_format]:
-                    trade_stats[trade_stat["id"]] = trade_stat
-            elif "\n" in trade_format:
-                for line in trade_format.splitlines():
-                    line = self._disambiguate(line, s.translation.ids)
-                    if line in self.trade_stats:
-                        for trade_stat in self.trade_stats[line]:
-                            partial_trade_stats[trade_stat["id"]] = trade_stat
-            else:
-                trade_format = self._disambiguate(re.sub(r"\d+", "#", trade_format), s.translation.ids)
+            for i in range(2):
+                if i:
+                    trade_format = re.sub(r"\[(?:[^|\]]+\|)?([^]]+)]", r"\1", trade_format)
                 if trade_format in self.trade_stats:
                     for trade_stat in self.trade_stats[trade_format]:
                         trade_stats[trade_stat["id"]] = trade_stat
+                elif "\n" in trade_format:
+                    for line in trade_format.splitlines():
+                        line = self._disambiguate(line, s.translation.ids)
+                        if line in self.trade_stats:
+                            for trade_stat in self.trade_stats[line]:
+                                partial_trade_stats[trade_stat["id"]] = trade_stat
+                else:
+                    hash_format = self._disambiguate(re.sub(r"\d+", "#", trade_format), s.translation.ids)
+                    if hash_format in self.trade_stats:
+                        for trade_stat in self.trade_stats[hash_format]:
+                            trade_stats[trade_stat["id"]] = trade_stat
 
             value = Stat(
                 condition=self._convert_range(s.range),
